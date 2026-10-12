@@ -1,0 +1,38 @@
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.local
+
+# JavaScript, pnpm and Vite
+node_modules/
+.pnpm-store/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Go build and test artifacts
+bin/
+*.test
+*.out
+coverage.out
+vendor/
+
+# Local infrastructure data
+infra/docker/**/data/
+# Temporary Compose retained only to stop the pre-monorepo PostgreSQL stack
+/infra/docker/postgres/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*~
+
+# Editors and operating systems
+.idea/
+.vscode/
+.fleet/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+{
+  "name": "imageflow-monorepo",
+  "private": true,
+  "scripts": {
+    "console:dev": "pnpm --filter @imageflow/console dev",
+    "console:build": "pnpm --filter @imageflow/console build",
+    "console:typecheck": "pnpm --filter @imageflow/console typecheck"
+  }
+}
