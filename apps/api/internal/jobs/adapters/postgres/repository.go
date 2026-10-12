@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,6 +15,70 @@ import (
 
 type JobRepository struct {
 	pool *pgxpool.Pool
+}
+
+func (repository *JobRepository) ClaimForProcessing(ctx context.Context, id string, now time.Time) (bool, error) {
+	result, err := repository.pool.Exec(ctx, `
+		UPDATE jobs
+		SET status = 'processing', attempts = attempts + 1,
+		    started_at = $2, updated_at = $2,
+		    error_code = NULL, error_message = NULL
+		WHERE id = $1
+		  AND (status = 'queued' OR (status = 'processing' AND updated_at < $2 - interval '15 seconds'))`, id, now.UTC())
+	if err != nil {
+		return false, fmt.Errorf("claim job for processing: %w", err)
+	}
+	return result.RowsAffected() == 1, nil
+}
+
+func (repository *JobRepository) Status(ctx context.Context, id string) (domain.Status, error) {
+	var status domain.Status
+	err := repository.pool.QueryRow(ctx, `SELECT status FROM jobs WHERE id = $1`, id).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", application.ErrJobNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("query job status: %w", err)
+	}
+	return status, nil
+}
+
+func (repository *JobRepository) UpdateProgress(ctx context.Context, id string, progress int, now time.Time) error {
+	result, err := repository.pool.Exec(ctx, `
+		UPDATE jobs SET progress = $2, updated_at = $3
+		WHERE id = $1 AND status = 'processing'`, id, progress, now.UTC())
+	if err != nil {
+		return fmt.Errorf("update job progress: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return fmt.Errorf("update job progress: %w", application.ErrJobNotFound)
+	}
+	return nil
+}
+
+func (repository *JobRepository) Complete(ctx context.Context, id string, now time.Time) error {
+	result, err := repository.pool.Exec(ctx, `
+		UPDATE jobs
+		SET status = 'completed', progress = 100, completed_at = $2, updated_at = $2
+		WHERE id = $1 AND status = 'processing'`, id, now.UTC())
+	if err != nil {
+		return fmt.Errorf("complete job: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return fmt.Errorf("complete job: %w", application.ErrJobNotFound)
+	}
+	return nil
+}
+
+func (repository *JobRepository) Fail(ctx context.Context, id, code, message string, now time.Time) error {
+	_, err := repository.pool.Exec(ctx, `
+		UPDATE jobs
+		SET status = 'failed', error_code = $2, error_message = $3, updated_at = $4
+		WHERE id = $1 AND status = 'processing'`, id, code, message, now.UTC())
+	if err != nil {
+		return fmt.Errorf("fail job: %w", err)
+	}
+	return nil
 }
 
 func NewJobRepository(pool *pgxpool.Pool) *JobRepository {

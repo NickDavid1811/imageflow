@@ -11,22 +11,33 @@ The first vertical slice provides:
 - Liveness and readiness endpoints.
 - PostgreSQL persistence through `pgx`.
 - A transactional outbox record created with every job.
+- Reliable publication to NATS JetStream.
+- An idempotent durable worker with simulated progress.
 - Separate API and worker entrypoints.
 
-NATS JetStream and object storage will be added through adapters without changing the domain contract.
+Object storage and real image processing will be added through adapters without changing the domain contract.
 
 ## Run
 
 ```bash
 cd /home/archlinux/Documents/proyectos/imageflow
-make infra-up
-make migrate
-make api
+pnpm infra:up
+pnpm migrate
+pnpm api
 ```
 
 The default database connection is
 `postgres://imageflow:imageflow_dev@localhost:5432/imageflow?sslmode=disable`.
 Override it with `IMAGEFLOW_DATABASE_URL` for the API and `DATABASE_URL` for migrations.
+
+The worker also accepts:
+
+```text
+IMAGEFLOW_NATS_URL=nats://localhost:4222
+IMAGEFLOW_NATS_STREAM=IMAGEFLOW_JOBS
+IMAGEFLOW_NATS_SUBJECT=imageflow.jobs.requested.v1
+IMAGEFLOW_NATS_CONSUMER=imageflow-workers
+```
 
 Create a job:
 
@@ -45,7 +56,6 @@ curl -i http://localhost:8080/v1/jobs \
 ## Verify
 
 ```bash
-make fmt
-make test
-make vet
+pnpm check
+pnpm build
 ```
