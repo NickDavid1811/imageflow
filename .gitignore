@@ -19,8 +19,6 @@ vendor/
 
 # Local infrastructure data
 infra/docker/**/data/
-# Temporary Compose retained only to stop the pre-monorepo PostgreSQL stack
-/infra/docker/postgres/
 
 # Logs and temporary files
 *.log
