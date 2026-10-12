@@ -83,6 +83,9 @@ button:disabled { cursor: not-allowed; opacity: .65; }
 .copy-button { display: grid; width: 1.6rem; height: 1.6rem; place-items: center; border: 0; border-radius: .4rem; background: var(--color-sand); color: var(--color-pine); }
 .copy-button svg { width: .8rem; height: .8rem; }
 .operation-pill { border: 1px solid var(--color-line); border-radius: .55rem; background: var(--color-surface); padding: .4rem .55rem; font-size: .63rem; font-weight: 700; color: var(--color-pine); }
+.code-panel { background: #10211d; color: #cbd8d3; border: 1px solid rgba(255, 255, 255, .06); }
+.code-panel-heading { border-bottom: 1px solid rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .62); }
+.code-panel-type { color: var(--color-mint); }
 
 html.dark .panel { box-shadow: 0 18px 55px rgba(0, 0, 0, .22); }
 html.dark .primary-button { background: #78b9a9; color: #08110e; box-shadow: 0 8px 22px rgba(0, 0, 0, .28); }
@@ -91,6 +94,8 @@ html.dark .status-queued { background: #3b3012; color: #f6d66f; }
 html.dark .status-processing { background: #102f43; color: #82cfff; }
 html.dark .status-completed { background: #123526; color: #78daa4; }
 html.dark .status-failed, html.dark .status-cancelled { background: #421f1b; color: #ff9d8f; }
+html.dark .code-panel { background: #07110e; color: #b9cbc4; border-color: #263b34; }
+html.dark .code-panel-heading { border-bottom-color: #263b34; color: #91a39d; }
 
 @media (max-width: 480px) {
   .panel-heading { padding-inline: 1.1rem; }

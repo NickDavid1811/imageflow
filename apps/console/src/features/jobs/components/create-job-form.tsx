@@ -48,7 +48,7 @@ export function CreateJobForm({ error, values, submitting, onChange, onSubmit }:
           </div>
         </fieldset>
 
-        {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">{error}</div>}
 
         <button disabled={submitting} className="primary-button group" type="submit">
           <span>{submitting ? 'Creando trabajo…' : 'Procesar imagen'}</span>

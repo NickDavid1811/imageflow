@@ -44,9 +44,9 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
             <div className="detail-row"><dt>Intentos</dt><dd>{job.attempts}</dd></div>
           </dl>
 
-          <div className="mt-6"><p className="section-kicker">Pipeline solicitado</p><div className="mt-3 flex flex-wrap items-center gap-2"><span className="operation-pill">Original</span>{job.operations.map((operation, index) => <span className="contents" key={`${operation.type}-${index}`}><ArrowIcon className="size-3 text-slate-400" /><span className="operation-pill uppercase">{describeOperation(operation)}</span></span>)}</div></div>
+          <div className="mt-6"><p className="section-kicker">Pipeline solicitado</p><div className="mt-3 flex flex-wrap items-center gap-2"><span className="operation-pill">Original</span>{job.operations.map((operation, index) => <span className="contents" key={`${operation.type}-${index}`}><ArrowIcon className="size-3 text-muted" /><span className="operation-pill uppercase">{describeOperation(operation)}</span></span>)}</div></div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl bg-ink text-white"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="text-xs font-semibold text-white/60">Payload</span><span className="font-mono text-[10px] text-mint">application/json</span></div><pre className="overflow-x-auto p-4 font-mono text-[11px] leading-5 text-slate-300">{JSON.stringify(job, null, 2)}</pre></div>
+          <div className="code-panel mt-6 overflow-hidden rounded-2xl"><div className="code-panel-heading flex items-center justify-between px-4 py-3"><span className="text-xs font-semibold">Payload</span><span className="code-panel-type font-mono text-[10px]">application/json</span></div><pre className="overflow-x-auto p-4 font-mono text-[11px] leading-5">{JSON.stringify(job, null, 2)}</pre></div>
         </div>
       )}
     </aside>
