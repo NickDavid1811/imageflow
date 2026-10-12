@@ -24,7 +24,10 @@ func (repository *JobRepository) ClaimForProcessing(ctx context.Context, id stri
 		    started_at = $2, updated_at = $2,
 		    error_code = NULL, error_message = NULL
 		WHERE id = $1
-		  AND (status = 'queued' OR (status = 'processing' AND updated_at < $2 - interval '15 seconds'))`, id, now.UTC())
+		  AND (
+		      status = 'queued'
+		      OR (status = 'processing' AND updated_at < ($2::timestamptz - interval '15 seconds'))
+		  )`, id, now.UTC())
 	if err != nil {
 		return false, fmt.Errorf("claim job for processing: %w", err)
 	}

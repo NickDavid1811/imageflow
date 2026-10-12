@@ -63,9 +63,9 @@ func (consumer *Consumer) handle(ctx context.Context, message *nats.Msg) {
 			}
 			return
 		}
-		consumer.logger.Error("job processing failed", "job_id", event.JobID, "error", err)
-		if err := message.Nak(); err != nil {
-			consumer.logger.Error("negative acknowledgment failed", "job_id", event.JobID, "error", err)
+		consumer.logger.Error("job processing failed; scheduling redelivery", "job_id", event.JobID, "error", err)
+		if err := message.NakWithDelay(5 * time.Second); err != nil {
+			consumer.logger.Error("delayed acknowledgment failed", "job_id", event.JobID, "error", err)
 		}
 		return
 	}
