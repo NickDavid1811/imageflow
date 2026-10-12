@@ -26,6 +26,13 @@ pnpm migrate
 pnpm api
 ```
 
+The public contract and interactive reference are available while the API is running:
+
+```text
+http://localhost:8080/openapi.yaml
+http://localhost:8080/docs
+```
+
 The default database connection is
 `postgres://imageflow:imageflow_dev@localhost:5432/imageflow?sslmode=disable`.
 Override it with `IMAGEFLOW_DATABASE_URL` for the API, worker and migrations.

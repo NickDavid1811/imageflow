@@ -16,6 +16,7 @@ var (
 	ErrInvalidProgress   = errors.New("job progress must be between 0 and 100")
 )
 
+// Status is the lifecycle state of an image-processing job.
 type Status string
 
 const (
@@ -26,6 +27,7 @@ const (
 	StatusCancelled  Status = "cancelled"
 )
 
+// Operation describes one transformation in the requested processing pipeline.
 type Operation struct {
 	Type    string `json:"type"`
 	Width   int    `json:"width,omitempty"`
@@ -34,6 +36,7 @@ type Operation struct {
 	Quality int    `json:"quality,omitempty"`
 }
 
+// Job is the persisted representation of an asynchronous image-processing request.
 type Job struct {
 	ID           string      `json:"id"`
 	SourceURL    string      `json:"source_url"`
@@ -49,6 +52,7 @@ type Job struct {
 	UpdatedAt    time.Time   `json:"updated_at"`
 }
 
+// NewJob validates input and creates a queued job.
 func NewJob(id, sourceURL string, operations []Operation, now time.Time) (Job, error) {
 	if strings.TrimSpace(id) == "" {
 		return Job{}, ErrInvalidID
@@ -76,6 +80,7 @@ func NewJob(id, sourceURL string, operations []Operation, now time.Time) (Job, e
 	}, nil
 }
 
+// Start moves a queued job into processing.
 func (job *Job) Start(now time.Time) error {
 	if job.Status != StatusQueued {
 		return ErrInvalidTransition
@@ -88,6 +93,7 @@ func (job *Job) Start(now time.Time) error {
 	return nil
 }
 
+// SetProgress records progress for a processing job.
 func (job *Job) SetProgress(progress int, now time.Time) error {
 	if job.Status != StatusProcessing {
 		return ErrInvalidTransition
@@ -100,6 +106,7 @@ func (job *Job) SetProgress(progress int, now time.Time) error {
 	return nil
 }
 
+// Complete marks a processing job as successfully completed.
 func (job *Job) Complete(now time.Time) error {
 	if job.Status != StatusProcessing {
 		return ErrInvalidTransition
@@ -112,6 +119,7 @@ func (job *Job) Complete(now time.Time) error {
 	return nil
 }
 
+// Fail marks a processing job as failed with diagnostic information.
 func (job *Job) Fail(code, message string, now time.Time) error {
 	if job.Status != StatusProcessing {
 		return ErrInvalidTransition
@@ -123,6 +131,7 @@ func (job *Job) Fail(code, message string, now time.Time) error {
 	return nil
 }
 
+// Retry returns a failed job to the queue and clears its previous failure.
 func (job *Job) Retry(now time.Time) error {
 	if job.Status != StatusFailed {
 		return ErrInvalidTransition
@@ -137,6 +146,7 @@ func (job *Job) Retry(now time.Time) error {
 	return nil
 }
 
+// Cancel marks a queued or processing job as cancelled.
 func (job *Job) Cancel(now time.Time) error {
 	if job.Status != StatusQueued && job.Status != StatusProcessing {
 		return ErrInvalidTransition

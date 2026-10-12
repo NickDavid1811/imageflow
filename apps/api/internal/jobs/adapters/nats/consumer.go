@@ -12,15 +12,18 @@ import (
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
 )
 
+// JobProcessor processes jobs and records terminal delivery exhaustion.
 type JobProcessor interface {
 	Process(context.Context, string) error
 	FailPermanently(context.Context, string, error) error
 }
 
+// DeadLetterPublisher stores a message that cannot be processed successfully.
 type DeadLetterPublisher interface {
 	PublishDeadLetter(context.Context, string, string, []byte, string, uint64) error
 }
 
+// Consumer pulls durable job messages and coordinates acknowledgments and retries.
 type Consumer struct {
 	subscription  *nats.Subscription
 	processor     JobProcessor
@@ -29,6 +32,7 @@ type Consumer struct {
 	maxDeliveries uint64
 }
 
+// NewConsumer constructs a durable job consumer.
 func NewConsumer(subscription *nats.Subscription, processor JobProcessor, deadLetters DeadLetterPublisher, maxDeliveries int, logger *slog.Logger) *Consumer {
 	return &Consumer{
 		subscription: subscription, processor: processor, deadLetters: deadLetters,
@@ -36,6 +40,7 @@ func NewConsumer(subscription *nats.Subscription, processor JobProcessor, deadLe
 	}
 }
 
+// Run fetches and processes messages until the context is cancelled or fetching fails.
 func (consumer *Consumer) Run(ctx context.Context) error {
 	for {
 		if ctx.Err() != nil {

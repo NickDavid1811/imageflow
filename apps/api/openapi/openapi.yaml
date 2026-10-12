@@ -1,0 +1,288 @@
+openapi: 3.1.0
+info:
+  title: ImageFlow API
+  version: 0.1.0
+  summary: Asynchronous image-processing jobs
+  description: |
+    ImageFlow accepts an image URL and a sequence of transformations, persists
+    the request, and processes it asynchronously. The current worker simulates
+    progress; binary image transformation and result delivery are not part of
+    version 0.1.0 yet.
+  license:
+    name: All rights reserved
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Health
+    description: Process liveness and dependency readiness.
+  - name: Jobs
+    description: Asynchronous image-processing jobs.
+paths:
+  /health/live:
+    get:
+      operationId: getLiveness
+      summary: Check API liveness
+      tags: [Health]
+      responses:
+        "200":
+          description: The API process is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Check API readiness
+      description: Verifies that PostgreSQL is reachable.
+      tags: [Health]
+      responses:
+        "200":
+          description: The API is ready to receive traffic.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ready
+        "503":
+          description: PostgreSQL is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: not_ready
+                  message: database is unavailable
+  /v1/jobs:
+    post:
+      operationId: createJob
+      summary: Create an image-processing job
+      description: |
+        Persists the job and its outbox event atomically. Processing continues
+        asynchronously after the response.
+      tags: [Jobs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+            examples:
+              resizeAndConvert:
+                summary: Resize and convert to WebP
+                value:
+                  source_url: https://example.com/product.jpg
+                  operations:
+                    - type: resize
+                      width: 1200
+                    - type: convert
+                      format: webp
+                      quality: 82
+      responses:
+        "202":
+          description: Job accepted for asynchronous processing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "400":
+          description: Malformed JSON or unknown request fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Request body exceeds one MiB.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: The URL or operation pipeline is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: The job could not be persisted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/jobs/{id}:
+    get:
+      operationId: getJob
+      summary: Get a job
+      tags: [Jobs]
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200":
+          description: Current job representation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: No job exists with this identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: The job could not be retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    JobID:
+      name: id
+      in: path
+      required: true
+      description: Server-generated job identifier.
+      schema:
+        type: string
+        pattern: "^job_[a-f0-9]{24}$"
+      example: job_5aa58501c5ac48355fba70e4
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+    CreateJobRequest:
+      type: object
+      additionalProperties: false
+      required: [source_url, operations]
+      properties:
+        source_url:
+          type: string
+          format: uri
+          pattern: "^https?://"
+          description: Absolute HTTP or HTTPS URL of the source image.
+        operations:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Operation"
+    Operation:
+      oneOf:
+        - $ref: "#/components/schemas/ResizeOperation"
+        - $ref: "#/components/schemas/ConvertOperation"
+      discriminator:
+        propertyName: type
+        mapping:
+          resize: "#/components/schemas/ResizeOperation"
+          convert: "#/components/schemas/ConvertOperation"
+    ResizeOperation:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: resize
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        quality:
+          type: integer
+          minimum: 0
+          maximum: 100
+      anyOf:
+        - required: [width]
+        - required: [height]
+    ConvertOperation:
+      type: object
+      additionalProperties: false
+      required: [type, format]
+      properties:
+        type:
+          type: string
+          const: convert
+        format:
+          type: string
+          enum: [jpeg, png, webp, avif]
+        quality:
+          type: integer
+          minimum: 0
+          maximum: 100
+    JobStatus:
+      type: string
+      enum: [queued, processing, completed, failed, cancelled]
+    Job:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source_url
+        - operations
+        - status
+        - progress
+        - attempts
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: job_5aa58501c5ac48355fba70e4
+        source_url:
+          type: string
+          format: uri
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Operation"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        attempts:
+          type: integer
+          minimum: 0
+        error_code:
+          type: string
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"

@@ -11,6 +11,7 @@ import (
 
 var ErrJobBusy = errors.New("job is already being processed")
 
+// ProcessingRepository is the persistence port used by the background processor.
 type ProcessingRepository interface {
 	ClaimForProcessing(context.Context, string, time.Time) (bool, error)
 	Status(context.Context, string) (domain.Status, error)
@@ -20,20 +21,24 @@ type ProcessingRepository interface {
 	FailPermanently(context.Context, string, string, string, time.Time) error
 }
 
+// FailPermanently records exhaustion of delivery attempts.
 func (processor *Processor) FailPermanently(ctx context.Context, jobID string, cause error) error {
 	return processor.repository.FailPermanently(ctx, jobID, "delivery_attempts_exhausted", cause.Error(), processor.now())
 }
 
+// Processor claims jobs and executes their processing lifecycle.
 type Processor struct {
 	repository ProcessingRepository
 	now        func() time.Time
 	delay      time.Duration
 }
 
+// NewProcessor constructs a processor using the production clock.
 func NewProcessor(repository ProcessingRepository) *Processor {
 	return &Processor{repository: repository, now: time.Now, delay: 600 * time.Millisecond}
 }
 
+// Process claims and processes one job and safely ignores duplicate terminal deliveries.
 func (processor *Processor) Process(ctx context.Context, jobID string) error {
 	claimed, err := processor.repository.ClaimForProcessing(ctx, jobID, processor.now())
 	if err != nil {

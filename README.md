@@ -49,3 +49,10 @@ pnpm infra:down
 ```
 
 Consulta [docs/architecture.md](docs/architecture.md) para conocer los límites entre componentes.
+Para retomar el trabajo en una nueva sesión, comienza por [docs/project-status.md](docs/project-status.md).
+
+Documentación adicional:
+
+- [Desarrollo local](docs/development.md)
+- [Operación del backend](docs/operations.md)
+- [Contrato OpenAPI](apps/api/openapi/openapi.yaml)

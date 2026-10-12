@@ -10,16 +10,19 @@ import (
 	"github.com/nickdavid1811/imageflow/internal/outbox/domain"
 )
 
+// Repository is the persistence port required by the outbox publisher.
 type Repository interface {
 	ClaimBatch(context.Context, int, time.Time, time.Duration) ([]domain.Event, error)
 	MarkPublished(context.Context, int64, time.Time) error
 	MarkFailed(context.Context, int64, string, time.Time) error
 }
 
+// EventPublisher sends one outbox payload to the message broker.
 type EventPublisher interface {
 	Publish(context.Context, string, []byte) error
 }
 
+// Publisher periodically claims and publishes pending outbox events.
 type Publisher struct {
 	repository Repository
 	messages   EventPublisher
@@ -28,10 +31,12 @@ type Publisher struct {
 	now        func() time.Time
 }
 
+// NewPublisher constructs an outbox publisher with production timing defaults.
 func NewPublisher(repository Repository, messages EventPublisher, logger *slog.Logger) *Publisher {
 	return &Publisher{repository: repository, messages: messages, logger: logger, interval: 500 * time.Millisecond, now: time.Now}
 }
 
+// Run publishes batches until the context is cancelled.
 func (publisher *Publisher) Run(ctx context.Context) error {
 	ticker := time.NewTicker(publisher.interval)
 	defer ticker.Stop()

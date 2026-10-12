@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/memory"
@@ -40,6 +42,76 @@ func TestCreateAndGetJob(t *testing.T) {
 	if recorder.Code != 200 {
 		t.Fatalf("status = %d, want %d", recorder.Code, 200)
 	}
+}
+
+func TestDocumentationEndpoints(t *testing.T) {
+	router := newTestRouter()
+
+	request := httptest.NewRequest("GET", "/openapi.yaml", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != 200 {
+		t.Fatalf("OpenAPI status = %d, want 200", recorder.Code)
+	}
+	if contentType := recorder.Header().Get("Content-Type"); !strings.Contains(contentType, "text/yaml") {
+		t.Fatalf("OpenAPI Content-Type = %q", contentType)
+	}
+	if disposition := recorder.Header().Get("Content-Disposition"); !strings.HasPrefix(disposition, "inline") {
+		t.Fatalf("OpenAPI Content-Disposition = %q, want inline", disposition)
+	}
+	contract := recorder.Body.String()
+	if !strings.Contains(contract, "openapi: 3.1.0") {
+		t.Fatal("OpenAPI response does not contain the embedded contract")
+	}
+	for _, documentedPath := range []string{"/health/live:", "/health/ready:", "/v1/jobs:", "/v1/jobs/{id}:"} {
+		if !strings.Contains(contract, documentedPath) {
+			t.Errorf("OpenAPI response does not document %s", documentedPath)
+		}
+	}
+
+	request = httptest.NewRequest("GET", "/docs", nil)
+	recorder = httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != 200 {
+		t.Fatalf("docs status = %d, want 200", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "createApiReference") {
+		t.Fatal("docs response does not initialize Scalar")
+	}
+	policy := recorder.Header().Get("Content-Security-Policy")
+	if !strings.Contains(policy, "script-src 'nonce-") {
+		t.Fatalf("docs CSP does not authorize its nonce: %q", policy)
+	}
+	if strings.Contains(recorder.Body.String(), "{{nonce}}") {
+		t.Fatal("docs response contains an unresolved nonce placeholder")
+	}
+}
+
+func TestCreateJobRejectsOversizedBody(t *testing.T) {
+	router := newTestRouter()
+	request := httptest.NewRequest("POST", "/v1/jobs", strings.NewReader(`{"padding":"`+strings.Repeat("x", (1<<20)+1)+`"}`))
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestCreateJobRejectsMultipleJSONValues(t *testing.T) {
+	router := newTestRouter()
+	request := httptest.NewRequest("POST", "/v1/jobs", strings.NewReader(`{"source_url":"https://example.com/image.jpg","operations":[{"type":"resize","width":300}]} {}`))
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != 400 {
+		t.Fatalf("status = %d, want 400", recorder.Code)
+	}
+}
+
+func newTestRouter() http.Handler {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repository := memory.NewJobRepository()
+	service := application.NewJobService(repository)
+	return NewHandler(service, readyCheck{}, logger).Routes()
 }
 
 type readyCheck struct{}

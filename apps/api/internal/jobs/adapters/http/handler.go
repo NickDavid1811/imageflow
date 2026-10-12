@@ -2,37 +2,92 @@ package httpadapter
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
 	"github.com/nickdavid1811/imageflow/internal/jobs/domain"
+	"github.com/nickdavid1811/imageflow/openapi"
 )
 
+const scalarDocument = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ImageFlow API Reference</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" nonce="{{nonce}}">
+    import { createApiReference } from 'https://cdn.jsdelivr.net/npm/@scalar/api-reference/esm.js'
+    createApiReference('#app', {
+      url: '/openapi.yaml',
+      pageTitle: 'ImageFlow API Reference',
+      withDefaultFonts: false,
+      hideClientButton: true
+    })
+  </script>
+</body>
+</html>`
+
+// Handler exposes job use cases and health checks over HTTP.
 type Handler struct {
 	service   *application.JobService
 	readiness ReadinessChecker
 	logger    *slog.Logger
 }
 
+// ReadinessChecker reports whether a required dependency is reachable.
 type ReadinessChecker interface {
 	Ping(context.Context) error
 }
 
+// NewHandler constructs the public HTTP adapter.
 func NewHandler(service *application.JobService, readiness ReadinessChecker, logger *slog.Logger) *Handler {
 	return &Handler{service: service, readiness: readiness, logger: logger}
 }
 
+// Routes returns the complete ImageFlow HTTP routing tree.
 func (handler *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", handler.live)
 	mux.HandleFunc("GET /health/ready", handler.ready)
+	mux.HandleFunc("GET /openapi.yaml", handler.openAPIDocument)
+	mux.HandleFunc("GET /docs", handler.documentation)
+	mux.HandleFunc("GET /docs/", handler.documentation)
 	mux.HandleFunc("POST /v1/jobs", handler.createJob)
 	mux.HandleFunc("GET /v1/jobs/{id}", handler.getJob)
 	return requestLog(handler.logger, mux)
+}
+
+func (handler *Handler) openAPIDocument(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "inline; filename=\"openapi.yaml\"")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(openapi.Document)
+}
+
+func (handler *Handler) documentation(w http.ResponseWriter, _ *http.Request) {
+	nonceBytes := make([]byte, 18)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		handler.logger.Error("generate documentation nonce failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "internal_error", "documentation could not be rendered")
+		return
+	}
+	nonce := base64.RawStdEncoding.EncodeToString(nonceBytes)
+	document := strings.Replace(scalarDocument, "{{nonce}}", nonce, 1)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+nonce+"' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: https:; connect-src 'self' https://cdn.jsdelivr.net; font-src data:")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, document)
 }
 
 func (handler *Handler) live(w http.ResponseWriter, _ *http.Request) {
@@ -57,7 +112,16 @@ func (handler *Handler) createJob(w http.ResponseWriter, request *http.Request) 
 	decoder := json.NewDecoder(request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&input); err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			writeError(w, http.StatusRequestEntityTooLarge, "request_too_large", "request body must not exceed 1 MiB")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "invalid_request", "request body must contain valid JSON")
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_request", "request body must contain a single JSON object")
 		return
 	}
 

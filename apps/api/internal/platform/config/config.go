@@ -17,6 +17,7 @@ const defaultNATSDeadLetterStream = "IMAGEFLOW_JOBS_DLQ"
 const defaultNATSDeadLetterSubject = "imageflow.jobs.failed.v1"
 const defaultNATSMaxDeliveries = 10
 
+// Config contains runtime settings shared by ImageFlow processes.
 type Config struct {
 	HTTPAddress           string
 	DatabaseURL           string
@@ -29,6 +30,7 @@ type Config struct {
 	NATSMaxDeliveries     int
 }
 
+// FromEnv loads IMAGEFLOW_* variables and safe local-development defaults.
 func FromEnv() (Config, error) {
 	address := os.Getenv("IMAGEFLOW_HTTP_ADDRESS")
 	if address == "" {

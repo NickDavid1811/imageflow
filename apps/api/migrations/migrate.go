@@ -24,6 +24,7 @@ type migration struct {
 	down    string
 }
 
+// Run applies pending migrations or reverts the latest applied migration.
 func Run(ctx context.Context, databaseURL, direction string) error {
 	connection, err := pgx.Connect(ctx, databaseURL)
 	if err != nil {

@@ -13,22 +13,26 @@ import (
 
 var ErrJobNotFound = errors.New("job not found")
 
+// JobRepository is the persistence port required by JobService.
 type JobRepository interface {
 	Create(context.Context, domain.Job) error
 	FindByID(context.Context, string) (domain.Job, error)
 }
 
+// CreateJobCommand contains input for a new job.
 type CreateJobCommand struct {
 	SourceURL  string
 	Operations []domain.Operation
 }
 
+// JobService coordinates job creation and retrieval.
 type JobService struct {
 	repository JobRepository
 	now        func() time.Time
 	newID      func() (string, error)
 }
 
+// NewJobService constructs a service with production clock and ID generation.
 func NewJobService(repository JobRepository) *JobService {
 	return &JobService{
 		repository: repository,
@@ -37,6 +41,7 @@ func NewJobService(repository JobRepository) *JobService {
 	}
 }
 
+// Create validates and persists a new queued job.
 func (service *JobService) Create(ctx context.Context, command CreateJobCommand) (domain.Job, error) {
 	id, err := service.newID()
 	if err != nil {
@@ -52,6 +57,7 @@ func (service *JobService) Create(ctx context.Context, command CreateJobCommand)
 	return job, nil
 }
 
+// Get returns a job by identifier or ErrJobNotFound.
 func (service *JobService) Get(ctx context.Context, id string) (domain.Job, error) {
 	return service.repository.FindByID(ctx, id)
 }

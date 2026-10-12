@@ -10,6 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// JetStream owns the job and dead-letter streams used by the worker.
 type JetStream struct {
 	connection        *nats.Conn
 	context           nats.JetStreamContext
@@ -20,6 +21,7 @@ type JetStream struct {
 	deadLetterSubject string
 }
 
+// Open connects to NATS and ensures the required streams exist with compatible configuration.
 func Open(url, stream, subject, consumer, deadLetterStream, deadLetterSubject string, logger *slog.Logger) (*JetStream, error) {
 	connection, err := nats.Connect(
 		url,
@@ -89,6 +91,7 @@ type deadLetterEnvelope struct {
 	FailedAt   time.Time `json:"failed_at"`
 }
 
+// PublishDeadLetter preserves an exhausted message and its failure metadata.
 func (client *JetStream) PublishDeadLetter(ctx context.Context, eventID, source string, payload []byte, cause string, deliveries uint64) error {
 	envelope, err := json.Marshal(deadLetterEnvelope{
 		EventID: eventID, Source: source, Payload: payload, Error: cause, Deliveries: deliveries, FailedAt: time.Now().UTC(),
@@ -105,6 +108,7 @@ func (client *JetStream) PublishDeadLetter(ctx context.Context, eventID, source 
 	return nil
 }
 
+// Publish sends a job event using eventID for JetStream deduplication.
 func (client *JetStream) Publish(ctx context.Context, eventID string, payload []byte) error {
 	message := nats.NewMsg(client.subject)
 	message.Data = payload
@@ -115,6 +119,7 @@ func (client *JetStream) Publish(ctx context.Context, eventID string, payload []
 	return nil
 }
 
+// Subscribe creates or binds the durable pull consumer used by workers.
 func (client *JetStream) Subscribe() (*nats.Subscription, error) {
 	if err := client.ensureUnlimitedDeliveries(); err != nil {
 		return nil, err
@@ -152,6 +157,7 @@ func (client *JetStream) ensureUnlimitedDeliveries() error {
 	return nil
 }
 
+// Close drains the NATS connection before releasing it.
 func (client *JetStream) Close() error {
 	if err := client.connection.Drain(); err != nil {
 		client.connection.Close()
