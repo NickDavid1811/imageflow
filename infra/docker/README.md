@@ -6,4 +6,6 @@ El archivo `compose.yaml` administra las dependencias locales de ImageFlow:
 - NATS JetStream en `localhost:4222`.
 - Monitor de NATS en `http://localhost:8222`.
 
-La configuración raíz se encuentra en `.env`. El volumen externo de PostgreSQL mantiene el nombre usado por el Compose anterior para preservar los datos existentes. `pnpm infra:up` lo reutiliza o lo crea automáticamente si todavía no existe.
+La configuración raíz se encuentra en `.env`. PostgreSQL persiste sus archivos localmente en `infra/docker/data/postgres`; este directorio está excluido de Git. NATS conserva sus datos en un volumen administrado por Docker.
+
+`pnpm infra:up` espera a que ambos servicios superen sus healthchecks antes de devolver el control, por lo que las migraciones pueden ejecutarse inmediatamente después.
