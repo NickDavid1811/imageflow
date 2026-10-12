@@ -28,7 +28,7 @@ pnpm api
 
 The default database connection is
 `postgres://imageflow:imageflow_dev@localhost:5432/imageflow?sslmode=disable`.
-Override it with `IMAGEFLOW_DATABASE_URL` for the API and `DATABASE_URL` for migrations.
+Override it with `IMAGEFLOW_DATABASE_URL` for the API, worker and migrations.
 
 The worker also accepts:
 
@@ -37,6 +37,9 @@ IMAGEFLOW_NATS_URL=nats://localhost:4222
 IMAGEFLOW_NATS_STREAM=IMAGEFLOW_JOBS
 IMAGEFLOW_NATS_SUBJECT=imageflow.jobs.requested.v1
 IMAGEFLOW_NATS_CONSUMER=imageflow-workers
+IMAGEFLOW_NATS_DLQ_STREAM=IMAGEFLOW_JOBS_DLQ
+IMAGEFLOW_NATS_DLQ_SUBJECT=imageflow.jobs.failed.v1
+IMAGEFLOW_NATS_MAX_DELIVERIES=10
 ```
 
 Create a job:
@@ -59,3 +62,14 @@ curl -i http://localhost:8080/v1/jobs \
 pnpm check
 pnpm build
 ```
+
+The root command provisions the isolated `imageflow_test` database and runs the
+PostgreSQL and NATS JetStream integration tests:
+
+```bash
+pnpm test:integration
+```
+
+When running the backend script directly, configure
+`IMAGEFLOW_TEST_DATABASE_URL` (the database name must end in `_test`) and
+`IMAGEFLOW_TEST_NATS_URL` explicitly.

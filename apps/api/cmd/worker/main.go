@@ -45,7 +45,10 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 
-	jetStream, err := messaging.Open(cfg.NATSURL, cfg.NATSStream, cfg.NATSSubject, cfg.NATSConsumer, logger)
+	jetStream, err := messaging.Open(
+		cfg.NATSURL, cfg.NATSStream, cfg.NATSSubject, cfg.NATSConsumer,
+		cfg.NATSDeadLetterStream, cfg.NATSDeadLetterSubject, logger,
+	)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,7 @@ func run(logger *slog.Logger) error {
 
 	jobs := jobpostgres.NewJobRepository(pool)
 	processor := jobapplication.NewProcessor(jobs)
-	consumer := natsadapter.NewConsumer(subscription, processor, logger)
+	consumer := natsadapter.NewConsumer(subscription, processor, jetStream, cfg.NATSMaxDeliveries, logger)
 	outbox := outboxpostgres.NewRepository(pool)
 	publisher := outboxapplication.NewPublisher(outbox, jetStream, logger)
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,18 +20,24 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	if err := run(logger); err != nil {
+		logger.Error("api stopped unexpectedly", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("api stopped")
+}
+
+func run(logger *slog.Logger) error {
 	cfg, err := config.FromEnv()
 	if err != nil {
-		logger.Error("invalid configuration", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
 	startupCtx, startupCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer startupCancel()
 	pool, err := database.Open(startupCtx, cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("database connection failed", "error", err)
-		os.Exit(1)
+		return err
 	}
 	defer pool.Close()
 
@@ -50,20 +57,23 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	serverErrors := make(chan error, 1)
 	go func() {
 		logger.Info("api listening", "address", cfg.HTTPAddress)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("api stopped unexpectedly", "error", err)
-			os.Exit(1)
+			serverErrors <- err
 		}
 	}()
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case err := <-serverErrors:
+		return fmt.Errorf("serve HTTP: %w", err)
+	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("graceful shutdown failed", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("shut down HTTP server: %w", err)
 	}
-	logger.Info("api stopped")
+	return nil
 }

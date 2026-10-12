@@ -38,3 +38,5 @@ La API crea el trabajo y el evento `job.requested.v1` en una misma transacción.
 2. El consumidor durable reclama el trabajo en PostgreSQL, simula su procesamiento y persiste el progreso.
 
 La entrega es al menos una vez. Las actualizaciones condicionales de estado hacen que el consumidor sea idempotente. Un trabajo `processing` sin actividad puede recuperarse después de 15 segundos.
+
+Los errores de procesamiento se reintentan con espera. Al alcanzar el límite configurado, el trabajo pasa a `failed`, el mensaje original se publica en el stream `IMAGEFLOW_JOBS_DLQ` y la entrega se termina. NATS mantiene entregas ilimitadas a nivel del consumidor para que la aplicación pueda persistir el fallo y la DLQ antes de confirmar definitivamente el mensaje.

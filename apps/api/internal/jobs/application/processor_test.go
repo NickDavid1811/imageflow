@@ -63,6 +63,10 @@ func (repository *processingRepositoryStub) ClaimForProcessing(context.Context, 
 	return repository.claimed, nil
 }
 
+func (repository *processingRepositoryStub) FailPermanently(context.Context, string, string, string, time.Time) error {
+	return nil
+}
+
 func (repository *processingRepositoryStub) Status(context.Context, string) (domain.Status, error) {
 	return repository.status, nil
 }

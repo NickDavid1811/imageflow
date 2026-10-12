@@ -84,6 +84,20 @@ func (repository *JobRepository) Fail(ctx context.Context, id, code, message str
 	return nil
 }
 
+func (repository *JobRepository) FailPermanently(ctx context.Context, id, code, message string, now time.Time) error {
+	result, err := repository.pool.Exec(ctx, `
+		UPDATE jobs
+		SET status = 'failed', error_code = $2, error_message = $3, updated_at = $4
+		WHERE id = $1 AND status IN ('queued', 'processing')`, id, code, message, now.UTC())
+	if err != nil {
+		return fmt.Errorf("permanently fail job: %w", err)
+	}
+	if result.RowsAffected() != 1 {
+		return fmt.Errorf("permanently fail job: %w", application.ErrJobNotFound)
+	}
+	return nil
+}
+
 func NewJobRepository(pool *pgxpool.Pool) *JobRepository {
 	return &JobRepository{pool: pool}
 }

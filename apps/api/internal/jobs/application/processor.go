@@ -17,6 +17,11 @@ type ProcessingRepository interface {
 	UpdateProgress(context.Context, string, int, time.Time) error
 	Complete(context.Context, string, time.Time) error
 	Fail(context.Context, string, string, string, time.Time) error
+	FailPermanently(context.Context, string, string, string, time.Time) error
+}
+
+func (processor *Processor) FailPermanently(ctx context.Context, jobID string, cause error) error {
+	return processor.repository.FailPermanently(ctx, jobID, "delivery_attempts_exhausted", cause.Error(), processor.now())
 }
 
 type Processor struct {

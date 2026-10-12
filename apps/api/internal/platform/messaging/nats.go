@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -10,14 +11,16 @@ import (
 )
 
 type JetStream struct {
-	connection *nats.Conn
-	context    nats.JetStreamContext
-	stream     string
-	subject    string
-	consumer   string
+	connection        *nats.Conn
+	context           nats.JetStreamContext
+	stream            string
+	subject           string
+	consumer          string
+	deadLetterStream  string
+	deadLetterSubject string
 }
 
-func Open(url, stream, subject, consumer string, logger *slog.Logger) (*JetStream, error) {
+func Open(url, stream, subject, consumer, deadLetterStream, deadLetterSubject string, logger *slog.Logger) (*JetStream, error) {
 	connection, err := nats.Connect(
 		url,
 		nats.Name("imageflow-worker"),
@@ -39,30 +42,65 @@ func Open(url, stream, subject, consumer string, logger *slog.Logger) (*JetStrea
 		connection.Close()
 		return nil, fmt.Errorf("open jetstream context: %w", err)
 	}
-	client := &JetStream{connection: connection, context: jetStream, stream: stream, subject: subject, consumer: consumer}
-	if err := client.ensureStream(); err != nil {
+	client := &JetStream{
+		connection: connection, context: jetStream, stream: stream, subject: subject, consumer: consumer,
+		deadLetterStream: deadLetterStream, deadLetterSubject: deadLetterSubject,
+	}
+	if err := client.ensureStream(stream, subject, nats.WorkQueuePolicy, 7*24*time.Hour); err != nil {
+		connection.Close()
+		return nil, err
+	}
+	if err := client.ensureStream(deadLetterStream, deadLetterSubject, nats.LimitsPolicy, 30*24*time.Hour); err != nil {
 		connection.Close()
 		return nil, err
 	}
 	return client, nil
 }
 
-func (client *JetStream) ensureStream() error {
-	if _, err := client.context.StreamInfo(client.stream); err == nil {
+func (client *JetStream) ensureStream(name, subject string, retention nats.RetentionPolicy, maxAge time.Duration) error {
+	if info, err := client.context.StreamInfo(name); err == nil {
+		if info.Config.Retention != retention || info.Config.Storage != nats.FileStorage || len(info.Config.Subjects) != 1 || info.Config.Subjects[0] != subject {
+			return fmt.Errorf("stream %s has incompatible configuration", name)
+		}
 		return nil
 	} else if err != nats.ErrStreamNotFound {
 		return fmt.Errorf("inspect stream: %w", err)
 	}
 	_, err := client.context.AddStream(&nats.StreamConfig{
-		Name:       client.stream,
-		Subjects:   []string{client.subject},
-		Retention:  nats.WorkQueuePolicy,
+		Name:       name,
+		Subjects:   []string{subject},
+		Retention:  retention,
 		Storage:    nats.FileStorage,
-		MaxAge:     7 * 24 * time.Hour,
+		MaxAge:     maxAge,
 		Duplicates: 2 * time.Minute,
 	})
 	if err != nil {
 		return fmt.Errorf("create stream: %w", err)
+	}
+	return nil
+}
+
+type deadLetterEnvelope struct {
+	EventID    string    `json:"event_id"`
+	Source     string    `json:"source"`
+	Payload    []byte    `json:"payload"`
+	Error      string    `json:"error"`
+	Deliveries uint64    `json:"deliveries"`
+	FailedAt   time.Time `json:"failed_at"`
+}
+
+func (client *JetStream) PublishDeadLetter(ctx context.Context, eventID, source string, payload []byte, cause string, deliveries uint64) error {
+	envelope, err := json.Marshal(deadLetterEnvelope{
+		EventID: eventID, Source: source, Payload: payload, Error: cause, Deliveries: deliveries, FailedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		return fmt.Errorf("encode dead-letter event: %w", err)
+	}
+	message := nats.NewMsg(client.deadLetterSubject)
+	message.Data = envelope
+	message.Header.Set(nats.MsgIdHdr, "dlq_"+eventID)
+	if _, err := client.context.PublishMsg(message, nats.Context(ctx)); err != nil {
+		return fmt.Errorf("publish dead-letter event: %w", err)
 	}
 	return nil
 }
@@ -78,6 +116,9 @@ func (client *JetStream) Publish(ctx context.Context, eventID string, payload []
 }
 
 func (client *JetStream) Subscribe() (*nats.Subscription, error) {
+	if err := client.ensureUnlimitedDeliveries(); err != nil {
+		return nil, err
+	}
 	subscription, err := client.context.PullSubscribe(
 		client.subject,
 		client.consumer,
@@ -85,12 +126,30 @@ func (client *JetStream) Subscribe() (*nats.Subscription, error) {
 		nats.ManualAck(),
 		nats.AckExplicit(),
 		nats.AckWait(30*time.Second),
-		nats.MaxDeliver(10),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create durable consumer: %w", err)
 	}
 	return subscription, nil
+}
+
+func (client *JetStream) ensureUnlimitedDeliveries() error {
+	info, err := client.context.ConsumerInfo(client.stream, client.consumer)
+	if err == nats.ErrConsumerNotFound {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect durable consumer: %w", err)
+	}
+	if info.Config.MaxDeliver == -1 {
+		return nil
+	}
+	config := info.Config
+	config.MaxDeliver = -1
+	if _, err := client.context.UpdateConsumer(client.stream, &config); err != nil {
+		return fmt.Errorf("update durable consumer delivery policy: %w", err)
+	}
+	return nil
 }
 
 func (client *JetStream) Close() error {
