@@ -18,7 +18,7 @@ coverage.out
 vendor/
 
 # Local infrastructure data
-infra/docker/**/data/
+/infra/docker/data/
 
 # Logs and temporary files
 *.log
