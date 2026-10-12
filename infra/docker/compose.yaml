@@ -41,6 +41,7 @@ services:
 volumes:
   postgres_data:
     name: imageflow-postgres_postgres_data
+    external: true
   nats_data:
 
 networks:

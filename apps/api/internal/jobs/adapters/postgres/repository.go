@@ -114,8 +114,8 @@ func (repository *JobRepository) Create(ctx context.Context, job domain.Job) err
 	}
 
 	_, err = transaction.Exec(ctx, `
-		INSERT INTO outbox_events (aggregate_id, event_type, payload, created_at)
-		VALUES ($1, 'job.requested.v1', $2, $3)`, job.ID, eventPayload, job.CreatedAt)
+		INSERT INTO outbox_events (aggregate_id, event_type, payload, created_at, available_at)
+		VALUES ($1, 'job.requested.v1', $2, $3, $3)`, job.ID, eventPayload, job.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("insert outbox event: %w", err)
 	}

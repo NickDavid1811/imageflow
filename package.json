@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "bootstrap": "pnpm install && pnpm --filter @imageflow/backend deps",
-    "infra:up": "docker compose -f infra/docker/compose.yaml up -d",
+    "infra:up": "(docker volume inspect imageflow-postgres_postgres_data >/dev/null 2>&1 || docker volume create imageflow-postgres_postgres_data) && docker compose -f infra/docker/compose.yaml up -d",
     "infra:down": "docker compose -f infra/docker/compose.yaml down",
     "infra:status": "docker compose -f infra/docker/compose.yaml ps",
     "infra:logs": "docker compose -f infra/docker/compose.yaml logs -f",
