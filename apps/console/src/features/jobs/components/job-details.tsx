@@ -27,7 +27,7 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
 
       {!job ? (
         <div className="grid min-h-[480px] place-items-center p-8 text-center">
-          <div className="max-w-xs"><div className="mx-auto grid size-16 place-items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-slate-400"><ActivityIcon className="size-7" /></div><h3 className="mt-5 font-display text-xl font-semibold">Aún no hay actividad</h3><p className="mt-2 text-sm leading-6 text-muted">Crea un trabajo para ver aquí su identificador, progreso y operaciones.</p></div>
+          <div className="max-w-xs"><div className="mx-auto grid size-16 place-items-center rounded-2xl border border-dashed border-line bg-sand text-muted"><ActivityIcon className="size-7" /></div><h3 className="mt-5 font-display text-xl font-semibold">Aún no hay actividad</h3><p className="mt-2 text-sm leading-6 text-muted">Crea un trabajo para ver aquí su identificador, progreso y operaciones.</p></div>
         </div>
       ) : (
         <div className="p-5 sm:p-7">
@@ -36,9 +36,9 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
             <div className="grid size-12 place-items-center rounded-2xl bg-sand text-pine"><ImageIcon className="size-6" /></div>
           </div>
 
-          <div className="mt-7"><div className="mb-2 flex justify-between text-xs font-semibold"><span className="text-muted">Progreso</span><span>{job.progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-coral transition-all duration-500" style={{ width: `${Math.max(job.progress, job.status === 'queued' ? 6 : 0)}%` }} /></div></div>
+          <div className="mt-7"><div className="mb-2 flex justify-between text-xs font-semibold"><span className="text-muted">Progreso</span><span>{job.progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-sand"><div className="h-full rounded-full bg-coral transition-all duration-500" style={{ width: `${Math.max(job.progress, job.status === 'queued' ? 6 : 0)}%` }} /></div></div>
 
-          <dl className="mt-7 divide-y divide-line rounded-2xl border border-line bg-white">
+          <dl className="mt-7 divide-y divide-line rounded-2xl border border-line bg-surface">
             <div className="detail-row"><dt>ID del trabajo</dt><dd><code>{job.id}</code><button onClick={copyID} className="copy-button" aria-label="Copiar ID">{copied ? <CheckIcon /> : <CopyIcon />}</button></dd></div>
             <div className="detail-row"><dt>Creado</dt><dd><ClockIcon className="size-4 text-muted" />{new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(job.created_at))}</dd></div>
             <div className="detail-row"><dt>Intentos</dt><dd>{job.attempts}</dd></div>

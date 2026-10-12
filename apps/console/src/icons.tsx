@@ -51,3 +51,11 @@ export function RefreshIcon(props: IconProps) {
 export function ImageIcon(props: IconProps) {
   return <svg {...defaults} {...props}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
 }
+
+export function MoonIcon(props: IconProps) {
+  return <svg {...defaults} {...props}><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"/></svg>
+}
+
+export function SunIcon(props: IconProps) {
+  return <svg {...defaults} {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>
+}

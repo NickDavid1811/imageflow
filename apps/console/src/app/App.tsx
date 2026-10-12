@@ -1,8 +1,11 @@
 import { APIStatus } from '../features/jobs/components/api-status'
 import { JobsWorkspace } from '../features/jobs/pages/jobs-workspace'
-import { ApertureIcon } from '../shared/icons'
+import { ApertureIcon, MoonIcon, SunIcon } from '../shared/icons'
+import { useTheme } from '../shared/theme/use-theme'
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme()
+
   return (
     <div className="min-h-screen bg-canvas text-ink">
       <header className="border-b border-line/80 bg-canvas/90 backdrop-blur-xl">
@@ -11,7 +14,12 @@ export default function App() {
             <div className="grid size-9 place-items-center rounded-xl bg-pine text-mint shadow-sm"><ApertureIcon className="size-5" /></div>
             <div><span className="font-display text-lg font-semibold tracking-tight">ImageFlow</span><span className="ml-2 text-sm text-muted">Console</span></div>
           </div>
-          <div className="flex items-center gap-3"><span className="hidden text-xs font-medium text-muted sm:block">API local</span><APIStatus /></div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label={`Cambiar a tema ${theme === 'light' ? 'oscuro' : 'claro'}`} title={`Usar tema ${theme === 'light' ? 'oscuro' : 'claro'}`}>
+              {theme === 'light' ? <MoonIcon className="size-4" /> : <SunIcon className="size-4" />}
+            </button>
+            <span className="hidden text-xs font-medium text-muted sm:block">API local</span><APIStatus />
+          </div>
         </div>
       </header>
 
