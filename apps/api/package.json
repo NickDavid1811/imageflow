@@ -1,0 +1,14 @@
+{
+  "name": "@imageflow/backend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "deps": "go mod download",
+    "migrate": "go run ./cmd/migrate up",
+    "migrate:down": "go run ./cmd/migrate down",
+    "test": "go test ./...",
+    "vet": "go vet ./...",
+    "build": "mkdir -p bin && go build -o bin/imageflow-api ./cmd/api && go build -o bin/imageflow-worker ./cmd/worker && go build -o bin/imageflow-migrate ./cmd/migrate",
+    "clean": "rm -rf bin coverage.out"
+  }
+}

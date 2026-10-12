@@ -12,7 +12,7 @@ Interfaz operativa ligera para crear y consultar trabajos de ImageFlow.
 ```bash
 cd /home/archlinux/Documents/proyectos/imageflow
 pnpm install
-make console
+pnpm console
 ```
 
 Vite expone la consola en `http://localhost:5173` y redirige las solicitudes `/api` hacia la API local de ImageFlow, evitando requerir CORS durante el desarrollo.

@@ -14,30 +14,38 @@ docs           Arquitectura y decisiones
 ## Preparación
 
 ```bash
-cp .env.example .env
-pnpm install
+pnpm bootstrap
 ```
+
+La configuración predeterminada funciona sin archivos adicionales. Las variables locales opcionales se configuran en `.env`, que nunca se versiona.
 
 ## Desarrollo
 
 ```bash
-make infra-up
-make migrate
-make api
+pnpm dev
 ```
 
-En terminales separadas:
+Este comando levanta PostgreSQL y NATS, aplica migraciones e inicia API, worker y consola en paralelo. También pueden iniciarse individualmente:
 
 ```bash
-make worker
-make console
+pnpm infra:up
+pnpm migrate
+pnpm api
+pnpm worker
+pnpm console
 ```
 
 ## Verificación
 
 ```bash
-make test
-make build
+pnpm check
+pnpm build
+```
+
+Para detener la infraestructura:
+
+```bash
+pnpm infra:down
 ```
 
 Consulta [docs/architecture.md](docs/architecture.md) para conocer los límites entre componentes.

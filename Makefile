@@ -1,34 +1,31 @@
 .PHONY: infra-up infra-down infra-status infra-logs migrate api worker console test build
 
-COMPOSE := docker compose --env-file .env -f infra/docker/compose.yaml
-
 infra-up:
-	$(COMPOSE) up -d
+	pnpm infra:up
 
 infra-down:
-	$(COMPOSE) down
+	pnpm infra:down
 
 infra-status:
-	$(COMPOSE) ps
+	pnpm infra:status
 
 infra-logs:
-	$(COMPOSE) logs -f
+	pnpm infra:logs
 
 migrate:
-	$(MAKE) -C apps/api migrate-up
+	pnpm migrate
 
 api:
-	$(MAKE) -C apps/api run-api
+	pnpm api
 
 worker:
-	$(MAKE) -C apps/api run-worker
+	pnpm worker
 
 console:
-	pnpm --filter @imageflow/console dev
+	pnpm console
 
 test:
-	cd apps/api && go test ./...
-	pnpm --filter @imageflow/console typecheck
+	pnpm test
 
 build:
-	pnpm --filter @imageflow/console build
+	pnpm build

@@ -1,3 +1,4 @@
 packages:
-  - "apps/console"
+  - "apps/*"
+  - "apps/api/cmd/*"
   - "packages/*"

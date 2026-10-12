@@ -2,8 +2,24 @@
   "name": "imageflow-monorepo",
   "private": true,
   "scripts": {
-    "console:dev": "pnpm --filter @imageflow/console dev",
-    "console:build": "pnpm --filter @imageflow/console build",
-    "console:typecheck": "pnpm --filter @imageflow/console typecheck"
+    "bootstrap": "pnpm install && pnpm --filter @imageflow/backend deps",
+    "infra:up": "docker compose -f infra/docker/compose.yaml up -d",
+    "infra:down": "docker compose -f infra/docker/compose.yaml down",
+    "infra:status": "docker compose -f infra/docker/compose.yaml ps",
+    "infra:logs": "docker compose -f infra/docker/compose.yaml logs -f",
+    "infra:config": "docker compose -f infra/docker/compose.yaml config",
+    "migrate": "pnpm --filter @imageflow/backend migrate",
+    "migrate:down": "pnpm --filter @imageflow/backend migrate:down",
+    "api": "pnpm --filter @imageflow/api dev",
+    "worker": "pnpm --filter @imageflow/worker dev",
+    "console": "pnpm --filter @imageflow/console dev",
+    "dev:services": "pnpm --parallel --stream --filter @imageflow/api --filter @imageflow/worker --filter @imageflow/console run dev",
+    "dev": "pnpm infra:up && pnpm migrate && pnpm dev:services",
+    "test": "pnpm --recursive --if-present run test",
+    "typecheck": "pnpm --filter @imageflow/console typecheck",
+    "vet": "pnpm --filter @imageflow/backend vet",
+    "check": "pnpm test && pnpm vet",
+    "build": "pnpm --filter @imageflow/backend --filter @imageflow/console run build",
+    "clean": "pnpm --recursive --if-present run clean"
   }
 }
