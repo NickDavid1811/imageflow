@@ -7,10 +7,12 @@ export function JobsWorkspace() {
 
   return (
     <>
-      <section className="mb-8 max-w-3xl">
-        <p className="eyebrow">Procesamiento asíncrono</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-0.035em] text-ink sm:text-5xl">Prepara cada imagen<br className="hidden sm:block" /> para su próximo destino.</h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-muted">Configura una transformación, envíala a ImageFlow y sigue su estado desde un único espacio operativo.</p>
+      <section className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <div className="shrink-0">
+          <p className="eyebrow">Procesamiento asíncrono</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold tracking-[-0.03em] text-ink sm:text-3xl">Prepara imágenes para su próximo destino.</h1>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-muted lg:text-right">Configura una transformación, envíala a ImageFlow y sigue su estado desde un único espacio operativo.</p>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(390px,.85fr)]">

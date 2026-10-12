@@ -23,7 +23,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1480px] px-5 py-8 sm:px-8 lg:py-12"><JobsWorkspace /></main>
+      <main className="mx-auto max-w-[1480px] px-5 py-6 sm:px-8 sm:py-8"><JobsWorkspace /></main>
       <footer className="mx-auto flex max-w-[1480px] items-center justify-between px-5 pb-8 pt-3 text-xs text-muted sm:px-8"><span>ImageFlow Console · v0.1</span><span>API-first image operations</span></footer>
     </div>
   )
