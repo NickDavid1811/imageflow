@@ -74,6 +74,8 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Descarga HTTP con protección SSRF, redirecciones limitadas, timeout y límite
   de 20 MiB.
 - Resize y conversión real para JPEG/PNG con la biblioteca estándar de Go.
+- Interpolación bilineal, modos `contain`, `cover` y `fill`, recorte explícito,
+  orientación EXIF y eliminación de metadatos mediante recodificación.
 - Almacenamiento local intercambiable y adaptador S3-compatible configurable.
 - Metadatos de salida y endpoint `GET /v1/jobs/{id}/result`.
 
@@ -103,7 +105,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 La primera implementación real está limitada deliberadamente a JPEG y PNG.
 Todavía faltan:
 
-- Resize con interpolación de mayor calidad.
+- Filtros de resize avanzados adicionales para casos fotográficos exigentes.
 - Soporte WebP y AVIF mediante un motor apropiado.
 - Configuración y pruebas contra Cloudflare R2 en un entorno desplegado.
 - Autenticación, API keys, cuotas y rate limiting.
