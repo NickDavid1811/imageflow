@@ -13,6 +13,7 @@ The first vertical slice provides:
 - A transactional outbox record created with every job.
 - Reliable publication to NATS JetStream.
 - An idempotent durable worker with real JPEG/PNG processing.
+- Bilinear resize with contain, cover, fill, crop, and JPEG EXIF orientation.
 - Local result storage with a configurable S3-compatible adapter for deployment.
 - Separate API and worker entrypoints.
 
@@ -58,7 +59,7 @@ curl -i http://localhost:8080/v1/jobs \
   -d '{
     "source_url": "https://example.com/product.jpg",
     "operations": [
-      {"type": "resize", "width": 800},
+      {"type": "resize", "width": 800, "height": 800, "fit": "cover"},
       {"type": "convert", "format": "jpeg", "quality": 80}
     ]
   }'
