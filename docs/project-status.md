@@ -74,7 +74,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Descarga HTTP con protección SSRF, redirecciones limitadas, timeout y límite
   de 20 MiB.
 - Resize y conversión real para JPEG/PNG con la biblioteca estándar de Go.
-- Almacenamiento local intercambiable mediante un puerto de aplicación.
+- Almacenamiento S3-compatible mediante MinIO, intercambiable por configuración.
 - Metadatos de salida y endpoint `GET /v1/jobs/{id}/result`.
 
 ### Frontend
@@ -95,6 +95,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Docker Compose con healthchecks.
 - `infra:up` espera hasta que los servicios estén saludables.
 - PostgreSQL guarda sus datos en `infra/docker/data/postgres`, excluido de Git.
+- MinIO guarda objetos en `infra/docker/data/minio`, excluido de Git.
 - NATS conserva sus datos en el volumen Docker `imageflow_nats_data`.
 
 ## Lo que todavía no hace
@@ -104,8 +105,7 @@ Todavía faltan:
 
 - Resize con interpolación de mayor calidad.
 - Soporte WebP y AVIF mediante un motor apropiado.
-- Almacenamiento S3-compatible para despliegues distribuidos; el adaptador
-  actual usa `infra/docker/data/objects` y solo es apropiado para desarrollo.
+- Configuración y pruebas contra Cloudflare R2 en un entorno desplegado.
 - Autenticación, API keys, cuotas y rate limiting.
 - Métricas, trazas y alertas.
 - Kubernetes y despliegue productivo.

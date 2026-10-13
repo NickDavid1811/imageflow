@@ -29,6 +29,7 @@ flowchart LR
     C --> D[API :8080]
     C --> E[Worker]
     C --> F[Console :5173]
+    A --> G[MinIO API :9000 / Console :9001]
 ```
 
 Los procesos también pueden iniciarse por separado:
@@ -74,10 +75,25 @@ actualizar el contrato y sus pruebas en el mismo cambio.
 
 ## Datos locales
 
-PostgreSQL escribe en `infra/docker/data/postgres` y los resultados procesados
-en `infra/docker/data/objects`; ambos quedan excluidos de Git. NATS usa el
-volumen `imageflow_nats_data`. La ruta de resultados se puede cambiar mediante
-`IMAGEFLOW_STORAGE_PATH`.
+PostgreSQL escribe en `infra/docker/data/postgres` y MinIO en
+`infra/docker/data/minio`; ambos quedan excluidos de Git. NATS usa el volumen
+`imageflow_nats_data`. La consola de MinIO está disponible en
+`http://localhost:9001` con las credenciales locales `imageflow` /
+`imageflow_dev_secret`.
+
+El almacenamiento S3-compatible es el predeterminado. Variables disponibles:
+
+```text
+IMAGEFLOW_STORAGE_DRIVER=s3
+IMAGEFLOW_S3_ENDPOINT=http://localhost:9000
+IMAGEFLOW_S3_REGION=us-east-1
+IMAGEFLOW_S3_BUCKET=imageflow
+IMAGEFLOW_S3_ACCESS_KEY=imageflow
+IMAGEFLOW_S3_SECRET_KEY=imageflow_dev_secret
+```
+
+Para usar archivos locales sin MinIO, define
+`IMAGEFLOW_STORAGE_DRIVER=local` y opcionalmente `IMAGEFLOW_STORAGE_PATH`.
 
 Para detener servicios conservando los datos:
 
