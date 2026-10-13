@@ -38,26 +38,6 @@ services:
       start_period: 5s
     networks: [imageflow]
 
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-    restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-imageflow}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-imageflow_dev_secret}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - ./data/minio:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
-    networks: [imageflow]
-
 volumes:
   nats_data:
 
