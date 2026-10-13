@@ -12,7 +12,7 @@ The first vertical slice provides:
 - PostgreSQL persistence through `pgx`.
 - A transactional outbox record created with every job.
 - Reliable publication to NATS JetStream.
-- An idempotent durable worker with simulated progress.
+- An idempotent durable worker with real JPEG/PNG processing.
 - Separate API and worker entrypoints.
 
 Object storage and real image processing will be added through adapters without changing the domain contract.
@@ -58,7 +58,7 @@ curl -i http://localhost:8080/v1/jobs \
     "source_url": "https://example.com/product.jpg",
     "operations": [
       {"type": "resize", "width": 800},
-      {"type": "convert", "format": "webp", "quality": 80}
+      {"type": "convert", "format": "jpeg", "quality": 80}
     ]
   }'
 ```

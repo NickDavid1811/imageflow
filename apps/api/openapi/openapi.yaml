@@ -5,9 +5,8 @@ info:
   summary: Asynchronous image-processing jobs
   description: |
     ImageFlow accepts an image URL and a sequence of transformations, persists
-    the request, and processes it asynchronously. The current worker simulates
-    progress; binary image transformation and result delivery are not part of
-    version 0.1.0 yet.
+    the request, downloads public JPEG/PNG sources, processes them asynchronously,
+    and exposes the generated artifact when the job completes.
   license:
     name: All rights reserved
 servers:
@@ -74,14 +73,14 @@ paths:
               $ref: "#/components/schemas/CreateJobRequest"
             examples:
               resizeAndConvert:
-                summary: Resize and convert to WebP
+                summary: Resize and convert to JPEG
                 value:
                   source_url: https://example.com/product.jpg
                   operations:
                     - type: resize
                       width: 1200
                     - type: convert
-                      format: webp
+                      format: jpeg
                       quality: 82
       responses:
         "202":
@@ -140,6 +139,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/jobs/{id}/result:
+    get:
+      operationId: getJobResult
+      summary: Get the generated image
+      tags: [Jobs]
+      parameters:
+        - $ref: "#/components/parameters/JobID"
+      responses:
+        "200":
+          description: Generated JPEG or PNG artifact.
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "404":
+          description: No job exists with this identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The job has not completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
     JobID:
@@ -194,9 +218,11 @@ components:
         width:
           type: integer
           minimum: 1
+          maximum: 12000
         height:
           type: integer
           minimum: 1
+          maximum: 12000
         quality:
           type: integer
           minimum: 0
@@ -214,7 +240,7 @@ components:
           const: convert
         format:
           type: string
-          enum: [jpeg, png, webp, avif]
+          enum: [jpeg, png]
         quality:
           type: integer
           minimum: 0
@@ -258,6 +284,8 @@ components:
           type: string
         error_message:
           type: string
+        output:
+          $ref: "#/components/schemas/Output"
         created_at:
           type: string
           format: date-time
@@ -270,6 +298,28 @@ components:
         updated_at:
           type: string
           format: date-time
+    Output:
+      type: object
+      additionalProperties: false
+      required: [content_type, format, size_bytes, width, height, url]
+      properties:
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png]
+        format:
+          type: string
+          enum: [jpeg, png]
+        size_bytes:
+          type: integer
+          minimum: 1
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        url:
+          type: string
     Error:
       type: object
       additionalProperties: false
