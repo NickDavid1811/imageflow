@@ -29,7 +29,6 @@ flowchart LR
     C --> D[API :8080]
     C --> E[Worker]
     C --> F[Console :5173]
-    A --> G[MinIO API :9000 / Console :9001]
 ```
 
 Los procesos también pueden iniciarse por separado:
@@ -75,25 +74,23 @@ actualizar el contrato y sus pruebas en el mismo cambio.
 
 ## Datos locales
 
-PostgreSQL escribe en `infra/docker/data/postgres` y MinIO en
-`infra/docker/data/minio`; ambos quedan excluidos de Git. NATS usa el volumen
-`imageflow_nats_data`. La consola de MinIO está disponible en
-`http://localhost:9001` con las credenciales locales `imageflow` /
-`imageflow_dev_secret`.
+PostgreSQL escribe en `infra/docker/data/postgres` y los resultados procesados
+en `infra/docker/data/objects`; ambos quedan excluidos de Git. NATS usa el
+volumen `imageflow_nats_data`.
 
-El almacenamiento S3-compatible es el predeterminado. Variables disponibles:
+El almacenamiento local es el predeterminado y no requiere otro contenedor.
+Para conectar un proveedor S3-compatible como Cloudflare R2:
 
 ```text
 IMAGEFLOW_STORAGE_DRIVER=s3
-IMAGEFLOW_S3_ENDPOINT=http://localhost:9000
+IMAGEFLOW_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 IMAGEFLOW_S3_REGION=us-east-1
 IMAGEFLOW_S3_BUCKET=imageflow
-IMAGEFLOW_S3_ACCESS_KEY=imageflow
-IMAGEFLOW_S3_SECRET_KEY=imageflow_dev_secret
+IMAGEFLOW_S3_ACCESS_KEY=<access-key>
+IMAGEFLOW_S3_SECRET_KEY=<secret-key>
 ```
 
-Para usar archivos locales sin MinIO, define
-`IMAGEFLOW_STORAGE_DRIVER=local` y opcionalmente `IMAGEFLOW_STORAGE_PATH`.
+La ruta local puede cambiarse mediante `IMAGEFLOW_STORAGE_PATH`.
 
 Para detener servicios conservando los datos:
 

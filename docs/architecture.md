@@ -35,7 +35,7 @@ apps/console -> apps/api -> PostgreSQL
 La API crea el trabajo y el evento `job.requested.v1` en una misma transacción. El worker ejecuta dos procesos coordinados:
 
 1. El publicador reclama eventos pendientes de la outbox y los publica con un identificador estable en JetStream.
-2. El consumidor durable reclama el trabajo, descarga una fuente pública JPEG/PNG, ejecuta las transformaciones y guarda el resultado en almacenamiento S3-compatible.
+2. El consumidor durable reclama el trabajo, descarga una fuente pública JPEG/PNG, ejecuta las transformaciones y guarda el resultado mediante un puerto de almacenamiento intercambiable.
 
 La entrega es al menos una vez. Las actualizaciones condicionales de estado hacen que el consumidor sea idempotente. Un trabajo `processing` sin actividad puede recuperarse después de 15 segundos.
 
