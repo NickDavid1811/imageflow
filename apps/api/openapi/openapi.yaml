@@ -79,6 +79,7 @@ paths:
                   operations:
                     - type: resize
                       width: 1200
+                      fit: contain
                     - type: convert
                       format: jpeg
                       quality: 82
@@ -201,11 +202,13 @@ components:
     Operation:
       oneOf:
         - $ref: "#/components/schemas/ResizeOperation"
+        - $ref: "#/components/schemas/CropOperation"
         - $ref: "#/components/schemas/ConvertOperation"
       discriminator:
         propertyName: type
         mapping:
           resize: "#/components/schemas/ResizeOperation"
+          crop: "#/components/schemas/CropOperation"
           convert: "#/components/schemas/ConvertOperation"
     ResizeOperation:
       type: object
@@ -223,13 +226,35 @@ components:
           type: integer
           minimum: 1
           maximum: 12000
-        quality:
-          type: integer
-          minimum: 0
-          maximum: 100
+        fit:
+          type: string
+          enum: [contain, cover, fill]
+          default: contain
       anyOf:
         - required: [width]
         - required: [height]
+    CropOperation:
+      type: object
+      additionalProperties: false
+      required: [type, x, y, width, height]
+      properties:
+        type:
+          type: string
+          const: crop
+        x:
+          type: integer
+          minimum: 0
+        y:
+          type: integer
+          minimum: 0
+        width:
+          type: integer
+          minimum: 1
+          maximum: 12000
+        height:
+          type: integer
+          minimum: 1
+          maximum: 12000
     ConvertOperation:
       type: object
       additionalProperties: false
