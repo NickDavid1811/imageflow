@@ -13,6 +13,7 @@ The first vertical slice provides:
 - A transactional outbox record created with every job.
 - Reliable publication to NATS JetStream.
 - An idempotent durable worker with real JPEG/PNG processing.
+- S3-compatible result storage backed by MinIO in local development.
 - Separate API and worker entrypoints.
 
 Object storage and real image processing will be added through adapters without changing the domain contract.
