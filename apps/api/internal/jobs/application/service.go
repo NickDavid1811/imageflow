@@ -18,11 +18,12 @@ var ErrResultNotReady = errors.New("job result is not ready")
 // JobRepository is the persistence port required by JobService.
 type JobRepository interface {
 	Create(context.Context, domain.Job) error
-	FindByID(context.Context, string) (domain.Job, error)
+	FindByProjectID(context.Context, string, string) (domain.Job, error)
 }
 
 // CreateJobCommand contains input for a new job.
 type CreateJobCommand struct {
+	ProjectID  string
 	SourceURL  string
 	Operations []domain.Operation
 }
@@ -61,8 +62,8 @@ func NewJobService(repository JobRepository, outputs ...OutputReader) *JobServic
 }
 
 // Result opens the generated artifact of a completed job.
-func (service *JobService) Result(ctx context.Context, id string) (JobResult, error) {
-	job, err := service.repository.FindByID(ctx, id)
+func (service *JobService) Result(ctx context.Context, projectID, id string) (JobResult, error) {
+	job, err := service.repository.FindByProjectID(ctx, projectID, id)
 	if err != nil {
 		return JobResult{}, err
 	}
@@ -82,7 +83,7 @@ func (service *JobService) Create(ctx context.Context, command CreateJobCommand)
 	if err != nil {
 		return domain.Job{}, fmt.Errorf("generate job id: %w", err)
 	}
-	job, err := domain.NewJob(id, command.SourceURL, command.Operations, service.now())
+	job, err := domain.NewJob(id, command.ProjectID, command.SourceURL, command.Operations, service.now())
 	if err != nil {
 		return domain.Job{}, err
 	}
@@ -93,8 +94,8 @@ func (service *JobService) Create(ctx context.Context, command CreateJobCommand)
 }
 
 // Get returns a job by identifier or ErrJobNotFound.
-func (service *JobService) Get(ctx context.Context, id string) (domain.Job, error) {
-	return service.repository.FindByID(ctx, id)
+func (service *JobService) Get(ctx context.Context, projectID, id string) (domain.Job, error) {
+	return service.repository.FindByProjectID(ctx, projectID, id)
 }
 
 func randomID() (string, error) {

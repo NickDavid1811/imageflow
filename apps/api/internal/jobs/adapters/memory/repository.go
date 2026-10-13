@@ -33,3 +33,14 @@ func (repository *JobRepository) FindByID(_ context.Context, id string) (domain.
 	}
 	return job, nil
 }
+
+func (repository *JobRepository) FindByProjectID(ctx context.Context, projectID, id string) (domain.Job, error) {
+	job, err := repository.FindByID(ctx, id)
+	if err != nil {
+		return domain.Job{}, err
+	}
+	if job.ProjectID != projectID {
+		return domain.Job{}, application.ErrJobNotFound
+	}
+	return job, nil
+}

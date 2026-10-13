@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	authapplication "github.com/nickdavid1811/imageflow/internal/auth/application"
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/memory"
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
 	"github.com/nickdavid1811/imageflow/internal/jobs/domain"
@@ -21,11 +22,12 @@ func TestCreateAndGetJob(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	repository := memory.NewJobRepository()
 	service := application.NewJobService(repository)
-	router := NewHandler(service, readyCheck{}, logger).Routes()
+	router := NewHandler(service, readyCheck{}, authStub{}, logger).Routes()
 
 	body := []byte(`{"source_url":"https://example.com/image.jpg","operations":[{"type":"resize","width":300},{"type":"convert","format":"jpeg","quality":80}]}`)
 	request := httptest.NewRequest("POST", "/v1/jobs", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
+	authorize(request)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 	if recorder.Code != 202 {
@@ -39,6 +41,7 @@ func TestCreateAndGetJob(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 	request = httptest.NewRequest("GET", "/v1/jobs/"+created.ID, nil)
+	authorize(request)
 	recorder = httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 	if recorder.Code != 200 {
@@ -49,14 +52,16 @@ func TestCreateAndGetJob(t *testing.T) {
 func TestGetCompletedJobResult(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	repository := memory.NewJobRepository()
-	job := domain.Job{ID: "job_123", Status: domain.StatusCompleted, Output: &domain.Output{Key: "job_123.png", ContentType: "image/png", Format: "png", SizeBytes: 5}, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	job := domain.Job{ID: "job_123", ProjectID: "prj_test", Status: domain.StatusCompleted, Output: &domain.Output{Key: "job_123.png", ContentType: "image/png", Format: "png", SizeBytes: 5}, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	if err := repository.Create(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
 	service := application.NewJobService(repository, resultReaderStub{})
-	router := NewHandler(service, readyCheck{}, logger).Routes()
+	router := NewHandler(service, readyCheck{}, authStub{}, logger).Routes()
 	recorder := httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest("GET", "/v1/jobs/job_123/result", nil))
+	request := httptest.NewRequest("GET", "/v1/jobs/job_123/result", nil)
+	authorize(request)
+	router.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK || recorder.Body.String() != "image" {
 		t.Fatalf("status = %d body = %q", recorder.Code, recorder.Body.String())
 	}
@@ -111,6 +116,7 @@ func TestDocumentationEndpoints(t *testing.T) {
 func TestCreateJobRejectsOversizedBody(t *testing.T) {
 	router := newTestRouter()
 	request := httptest.NewRequest("POST", "/v1/jobs", strings.NewReader(`{"padding":"`+strings.Repeat("x", (1<<20)+1)+`"}`))
+	authorize(request)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusRequestEntityTooLarge {
@@ -121,6 +127,7 @@ func TestCreateJobRejectsOversizedBody(t *testing.T) {
 func TestCreateJobRejectsMultipleJSONValues(t *testing.T) {
 	router := newTestRouter()
 	request := httptest.NewRequest("POST", "/v1/jobs", strings.NewReader(`{"source_url":"https://example.com/image.jpg","operations":[{"type":"resize","width":300}]} {}`))
+	authorize(request)
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, request)
 	if recorder.Code != 400 {
@@ -128,16 +135,50 @@ func TestCreateJobRejectsMultipleJSONValues(t *testing.T) {
 	}
 }
 
+func TestProtectedRouteRequiresAPIKey(t *testing.T) {
+	router := newTestRouter()
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest("GET", "/v1/jobs/job_123", nil))
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("status=%d", recorder.Code)
+	}
+}
+
+func TestProjectCannotReadAnotherProjectJob(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repository := memory.NewJobRepository()
+	_ = repository.Create(context.Background(), domain.Job{ID: "job_other", ProjectID: "prj_other"})
+	service := application.NewJobService(repository)
+	router := NewHandler(service, readyCheck{}, authStub{}, logger).Routes()
+	request := httptest.NewRequest("GET", "/v1/jobs/job_other", nil)
+	authorize(request)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status=%d", recorder.Code)
+	}
+}
+
 func newTestRouter() http.Handler {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	repository := memory.NewJobRepository()
 	service := application.NewJobService(repository)
-	return NewHandler(service, readyCheck{}, logger).Routes()
+	return NewHandler(service, readyCheck{}, authStub{}, logger).Routes()
 }
 
 type readyCheck struct{}
 
 func (readyCheck) Ping(context.Context) error { return nil }
+
+type authStub struct{}
+
+func (authStub) Authenticate(context.Context, string) (authapplication.Principal, error) {
+	return authapplication.Principal{ProjectID: "prj_test", Environment: "test", APIKeyID: "key_test"}, nil
+}
+
+func authorize(request *http.Request) {
+	request.Header.Set("Authorization", "Bearer if_test_valid_test_key_123456")
+}
 
 type resultReaderStub struct{}
 

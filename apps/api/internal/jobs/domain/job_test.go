@@ -8,7 +8,7 @@ import (
 
 func TestNewJob(t *testing.T) {
 	now := time.Date(2026, time.October, 12, 12, 0, 0, 0, time.UTC)
-	job, err := NewJob("job_123", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, now)
+	job, err := NewJob("job_123", "prj_test", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, now)
 	if err != nil {
 		t.Fatalf("NewJob() error = %v", err)
 	}
@@ -37,7 +37,7 @@ func TestNewJobRejectsInvalidInput(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := NewJob("job_123", test.sourceURL, test.operations, time.Now())
+			_, err := NewJob("job_123", "prj_test", test.sourceURL, test.operations, time.Now())
 			if !errors.Is(err, test.want) {
 				t.Fatalf("NewJob() error = %v, want %v", err, test.want)
 			}
@@ -47,7 +47,7 @@ func TestNewJobRejectsInvalidInput(t *testing.T) {
 
 func TestJobLifecycle(t *testing.T) {
 	createdAt := time.Date(2026, time.October, 12, 12, 0, 0, 0, time.UTC)
-	job, err := NewJob("job_123", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, createdAt)
+	job, err := NewJob("job_123", "prj_test", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, createdAt)
 	if err != nil {
 		t.Fatalf("NewJob() error = %v", err)
 	}
@@ -80,7 +80,7 @@ func TestJobLifecycle(t *testing.T) {
 
 func TestFailedJobCanBeRetried(t *testing.T) {
 	now := time.Date(2026, time.October, 12, 12, 0, 0, 0, time.UTC)
-	job, err := NewJob("job_123", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, now)
+	job, err := NewJob("job_123", "prj_test", "https://example.com/image.jpg", []Operation{{Type: "resize", Width: 800}}, now)
 	if err != nil {
 		t.Fatalf("NewJob() error = %v", err)
 	}

@@ -59,7 +59,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 ### Backend
 
 - Go con arquitectura hexagonal pragmática.
-- Binarios independientes para API, worker y migraciones.
+- Binarios independientes para API, worker, migraciones y administración.
 - Dominio y casos de uso sin dependencia directa de HTTP, PostgreSQL o NATS.
 - Persistencia con `pgx` y migraciones SQL embebidas.
 - Transactional Outbox para crear el trabajo y su evento atómicamente.
@@ -71,6 +71,8 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Liveness, readiness y logs estructurados.
 - Cierre ordenado de API y worker.
 - Contrato OpenAPI 3.1 embebido y referencia interactiva con Scalar.
+- Proyectos aislados y autenticación Bearer mediante API keys `test`/`live`
+  almacenadas únicamente como hash SHA-256.
 - Descarga HTTP con protección SSRF, redirecciones limitadas, timeout y límite
   de 20 MiB.
 - Resize y conversión real para JPEG/PNG con la biblioteca estándar de Go.
@@ -88,7 +90,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Tema claro/oscuro con preferencia guardada en `localStorage`.
 - Estados visuales para `queued`, `processing`, `completed`, `failed` y
   `cancelled`.
-- Enlace al archivo generado cuando el trabajo termina.
+- Descarga autenticada del archivo generado cuando el trabajo termina.
 
 ### Infraestructura local
 
@@ -108,7 +110,7 @@ Todavía faltan:
 - Filtros de resize avanzados adicionales para casos fotográficos exigentes.
 - Soporte WebP y AVIF mediante un motor apropiado.
 - Configuración y pruebas contra Cloudflare R2 en un entorno desplegado.
-- Autenticación, API keys, cuotas y rate limiting.
+- Cuotas y rate limiting por proyecto.
 - Métricas, trazas y alertas.
 - Kubernetes y despliegue productivo.
 - Autenticación de la documentación interactiva antes de un despliegue público.
@@ -121,6 +123,8 @@ apps/
 │   ├── cmd/api/                 API HTTP
 │   ├── cmd/worker/              consumidor y publicador
 │   ├── cmd/migrate/             migrador
+│   ├── cmd/admin/               alta de proyectos y API keys
+│   ├── internal/auth/           autenticación y persistencia de credenciales
 │   ├── internal/jobs/
 │   │   ├── domain/              entidades y reglas
 │   │   ├── application/         casos de uso y puertos
@@ -147,10 +151,14 @@ GET  /openapi.yaml
 GET  /docs
 POST /v1/jobs
 GET  /v1/jobs/{id}
+GET  /v1/jobs/{id}/result
 ```
 
-`POST /v1/jobs` responde `202 Accepted`. La consola consulta posteriormente
-`GET /v1/jobs/{id}` hasta alcanzar un estado terminal.
+Las rutas `/v1/*` requieren `Authorization: Bearer <api-key>`. Cada consulta se
+restringe al `project_id` asociado con la clave; consultar un trabajo de otro
+proyecto responde como recurso inexistente. `POST /v1/jobs` responde
+`202 Accepted` y la consola consulta `GET /v1/jobs/{id}` hasta alcanzar un
+estado terminal.
 
 ## Comandos cotidianos
 
@@ -199,6 +207,7 @@ importantes:
 ```text
 IMAGEFLOW_HTTP_ADDRESS
 IMAGEFLOW_DATABASE_URL
+IMAGEFLOW_DEVELOPMENT_API_KEY
 IMAGEFLOW_NATS_URL
 IMAGEFLOW_NATS_STREAM
 IMAGEFLOW_NATS_SUBJECT

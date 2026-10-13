@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "cd ../.. && go run ./cmd/api"
+    "dev": "cd ../.. && IMAGEFLOW_DEVELOPMENT_API_KEY=if_test_local_development_key_change_me go run ./cmd/api"
   }
 }

@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	authpostgres "github.com/nickdavid1811/imageflow/internal/auth/adapters/postgres"
+	authapplication "github.com/nickdavid1811/imageflow/internal/auth/application"
 	httpadapter "github.com/nickdavid1811/imageflow/internal/jobs/adapters/http"
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/postgres"
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
@@ -48,7 +50,12 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	service := application.NewJobService(repository, outputs)
-	handler := httpadapter.NewHandler(service, pool, logger)
+	authRepository := authpostgres.NewRepository(pool)
+	if err := authRepository.EnsureDevelopmentAPIKey(startupCtx, cfg.DevelopmentAPIKey); err != nil {
+		return err
+	}
+	authenticator := authapplication.NewAuthenticator(authRepository)
+	handler := httpadapter.NewHandler(service, pool, authenticator, logger)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddress,

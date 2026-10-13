@@ -9,7 +9,7 @@
     "test": "go test ./...",
     "test:integration": "go test -tags=integration ./...",
     "vet": "go vet ./...",
-    "build": "mkdir -p bin && go build -o bin/imageflow-api ./cmd/api && go build -o bin/imageflow-worker ./cmd/worker && go build -o bin/imageflow-migrate ./cmd/migrate",
+    "build": "mkdir -p bin && go build -o bin/imageflow-api ./cmd/api && go build -o bin/imageflow-worker ./cmd/worker && go build -o bin/imageflow-migrate ./cmd/migrate && go build -o bin/imageflow-admin ./cmd/admin",
     "clean": "rm -rf bin coverage.out"
   }
 }

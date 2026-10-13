@@ -32,6 +32,7 @@ func TestJobAndOutboxPersistence(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	job, err := domain.NewJob(
 		"job_integration_"+strings.ReplaceAll(now.Format(time.RFC3339Nano), ":", ""),
+		"prj_local",
 		"https://example.com/source.jpg",
 		[]domain.Operation{{Type: "resize", Width: 640}},
 		now,

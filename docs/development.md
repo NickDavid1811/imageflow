@@ -72,6 +72,32 @@ http://localhost:8080/openapi.yaml
 `openapi/openapi.yaml` es el contrato fuente. Al modificar un endpoint se debe
 actualizar el contrato y sus pruebas en el mismo cambio.
 
+## Autenticación local
+
+Las rutas `/v1/*` requieren una API key. Al ejecutar `pnpm dev`, los scripts
+locales configuran exclusivamente para desarrollo esta clave compartida entre
+la API y la consola:
+
+```text
+if_test_local_development_key_change_me
+```
+
+La migración no guarda esta credencial. La API solo la crea cuando recibe
+`IMAGEFLOW_DEVELOPMENT_API_KEY`, variable definida por el comando local de
+desarrollo. Los builds de producción de la consola tampoco contienen una clave.
+
+Para crear otro proyecto y emitir su primera clave:
+
+```bash
+cd apps/api
+go run ./cmd/admin --name "Mi aplicación" --environment test
+go run ./cmd/admin --name "Mi aplicación productiva" --environment live
+```
+
+El comando imprime el secreto una sola vez. En clientes HTTP se envía como
+`Authorization: Bearer <api-key>`. La consola puede usar otra clave con
+`VITE_IMAGEFLOW_API_KEY`.
+
 ## Datos locales
 
 PostgreSQL escribe en `infra/docker/data/postgres` y los resultados procesados

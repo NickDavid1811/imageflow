@@ -9,7 +9,7 @@ import {
   RefreshIcon,
 } from "../../../shared/icons";
 import { statusLabels, type Job } from "../model/job";
-import { env } from "../../../shared/config/env";
+import { downloadJobResult } from "../api/jobs-api";
 
 interface Props {
   job: Job | null;
@@ -25,6 +25,13 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
     await navigator.clipboard.writeText(job.id);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function openResult() {
+    if (!job?.output) return;
+    const url = URL.createObjectURL(await downloadJobResult(job.id));
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   return (
@@ -126,14 +133,13 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
           </dl>
 
           {job.output && (
-            <a
+            <button
+              type="button"
+              onClick={openResult}
               className="mt-5 flex w-full items-center justify-center rounded-xl bg-pine px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-              href={`${env.apiURL}${job.output.url}`}
-              target="_blank"
-              rel="noreferrer"
             >
               Ver imagen procesada · {job.output.width} × {job.output.height}
-            </a>
+            </button>
           )}
 
           <div className="mt-6">

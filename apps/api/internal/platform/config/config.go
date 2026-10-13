@@ -42,6 +42,7 @@ type Config struct {
 	S3Bucket              string
 	S3AccessKey           string
 	S3SecretKey           string
+	DevelopmentAPIKey     string
 }
 
 // FromEnv loads IMAGEFLOW_* variables and safe local-development defaults.
@@ -86,6 +87,7 @@ func FromEnv() (Config, error) {
 		S3Bucket:              valueOrDefault("IMAGEFLOW_S3_BUCKET", defaultS3Bucket),
 		S3AccessKey:           valueOrDefault("IMAGEFLOW_S3_ACCESS_KEY", defaultS3AccessKey),
 		S3SecretKey:           valueOrDefault("IMAGEFLOW_S3_SECRET_KEY", defaultS3SecretKey),
+		DevelopmentAPIKey:     os.Getenv("IMAGEFLOW_DEVELOPMENT_API_KEY"),
 	}, nil
 }
 

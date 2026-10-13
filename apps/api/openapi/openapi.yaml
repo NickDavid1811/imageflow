@@ -12,6 +12,8 @@ info:
 servers:
   - url: http://localhost:8080
     description: Local development
+security:
+  - bearerAuth: []
 tags:
   - name: Health
     description: Process liveness and dependency readiness.
@@ -20,6 +22,7 @@ tags:
 paths:
   /health/live:
     get:
+      security: []
       operationId: getLiveness
       summary: Check API liveness
       tags: [Health]
@@ -34,6 +37,7 @@ paths:
                 status: ok
   /health/ready:
     get:
+      security: []
       operationId: getReadiness
       summary: Check API readiness
       description: Verifies that PostgreSQL is reachable.
@@ -90,6 +94,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Job"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "400":
           description: Malformed JSON or unknown request fields.
           content:
@@ -128,6 +134,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Job"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: No job exists with this identifier.
           content:
@@ -153,6 +161,8 @@ paths:
           content:
             image/jpeg: {}
             image/png: {}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "404":
           description: No job exists with this identifier.
           content:
@@ -166,6 +176,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
+  responses:
+    Unauthorized:
+      description: The Bearer API key is missing, invalid, or revoked.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer realm="imageflow"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: unauthorized
+              message: a valid API key is required
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: ImageFlow API key
+      description: Use an `if_test_...` or `if_live_...` project API key.
   parameters:
     JobID:
       name: id
@@ -278,6 +310,7 @@ components:
       additionalProperties: false
       required:
         - id
+        - project_id
         - source_url
         - operations
         - status
@@ -289,6 +322,9 @@ components:
         id:
           type: string
           example: job_5aa58501c5ac48355fba70e4
+        project_id:
+          type: string
+          example: prj_0123456789abcdef
         source_url:
           type: string
           format: uri

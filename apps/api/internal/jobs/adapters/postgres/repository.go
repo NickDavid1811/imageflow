@@ -123,10 +123,10 @@ func (repository *JobRepository) Create(ctx context.Context, job domain.Job) err
 
 	_, err = transaction.Exec(ctx, `
 		INSERT INTO jobs (
-			id, source_url, operations, status, progress, attempts,
+			id, project_id, source_url, operations, status, progress, attempts,
 			error_code, error_message, created_at, started_at, completed_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''), $9, $10, $11, $12)`,
-		job.ID, job.SourceURL, operations, job.Status, job.Progress, job.Attempts,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''), $10, $11, $12, $13)`,
+		job.ID, job.ProjectID, job.SourceURL, operations, job.Status, job.Progress, job.Attempts,
 		job.ErrorCode, job.ErrorMessage, job.CreatedAt, job.StartedAt, job.CompletedAt, job.UpdatedAt,
 	)
 	if err != nil {
@@ -146,19 +146,27 @@ func (repository *JobRepository) Create(ctx context.Context, job domain.Job) err
 }
 
 func (repository *JobRepository) FindByID(ctx context.Context, id string) (domain.Job, error) {
+	return repository.find(ctx, `WHERE id = $1`, id)
+}
+
+// FindByProjectID returns a job only when it belongs to the authenticated project.
+func (repository *JobRepository) FindByProjectID(ctx context.Context, projectID, id string) (domain.Job, error) {
+	return repository.find(ctx, `WHERE project_id = $1 AND id = $2`, projectID, id)
+}
+
+func (repository *JobRepository) find(ctx context.Context, condition string, arguments ...any) (domain.Job, error) {
 	var job domain.Job
 	var operations []byte
 	var outputKey, outputContentType, outputFormat *string
 	var outputSize *int64
 	var outputWidth, outputHeight *int
 	err := repository.pool.QueryRow(ctx, `
-		SELECT id, source_url, operations, status, progress, attempts,
+		SELECT id, project_id, source_url, operations, status, progress, attempts,
 		       COALESCE(error_code, ''), COALESCE(error_message, ''),
 		       created_at, started_at, completed_at, updated_at,
 		       output_key, output_content_type, output_format, output_size_bytes, output_width, output_height
-		FROM jobs
-		WHERE id = $1`, id).Scan(
-		&job.ID, &job.SourceURL, &operations, &job.Status, &job.Progress, &job.Attempts,
+		FROM jobs `+condition, arguments...).Scan(
+		&job.ID, &job.ProjectID, &job.SourceURL, &operations, &job.Status, &job.Progress, &job.Attempts,
 		&job.ErrorCode, &job.ErrorMessage, &job.CreatedAt, &job.StartedAt, &job.CompletedAt, &job.UpdatedAt,
 		&outputKey, &outputContentType, &outputFormat, &outputSize, &outputWidth, &outputHeight,
 	)

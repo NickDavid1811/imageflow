@@ -42,6 +42,7 @@ type Operation struct {
 // Job is the persisted representation of an asynchronous image-processing request.
 type Job struct {
 	ID           string      `json:"id"`
+	ProjectID    string      `json:"project_id"`
 	SourceURL    string      `json:"source_url"`
 	Operations   []Operation `json:"operations"`
 	Status       Status      `json:"status"`
@@ -68,8 +69,11 @@ type Output struct {
 }
 
 // NewJob validates input and creates a queued job.
-func NewJob(id, sourceURL string, operations []Operation, now time.Time) (Job, error) {
+func NewJob(id, projectID, sourceURL string, operations []Operation, now time.Time) (Job, error) {
 	if strings.TrimSpace(id) == "" {
+		return Job{}, ErrInvalidID
+	}
+	if strings.TrimSpace(projectID) == "" {
 		return Job{}, ErrInvalidID
 	}
 	parsedURL, err := url.ParseRequestURI(sourceURL)
@@ -87,6 +91,7 @@ func NewJob(id, sourceURL string, operations []Operation, now time.Time) (Job, e
 
 	return Job{
 		ID:         id,
+		ProjectID:  projectID,
 		SourceURL:  sourceURL,
 		Operations: append([]Operation(nil), operations...),
 		Status:     StatusQueued,

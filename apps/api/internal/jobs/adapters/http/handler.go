@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 
+	authapplication "github.com/nickdavid1811/imageflow/internal/auth/application"
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
 	"github.com/nickdavid1811/imageflow/internal/jobs/domain"
 	"github.com/nickdavid1811/imageflow/openapi"
@@ -43,6 +44,12 @@ type Handler struct {
 	service   *application.JobService
 	readiness ReadinessChecker
 	logger    *slog.Logger
+	auth      Authenticator
+}
+
+// Authenticator verifies bearer credentials for protected routes.
+type Authenticator interface {
+	Authenticate(context.Context, string) (authapplication.Principal, error)
 }
 
 // ReadinessChecker reports whether a required dependency is reachable.
@@ -51,8 +58,8 @@ type ReadinessChecker interface {
 }
 
 // NewHandler constructs the public HTTP adapter.
-func NewHandler(service *application.JobService, readiness ReadinessChecker, logger *slog.Logger) *Handler {
-	return &Handler{service: service, readiness: readiness, logger: logger}
+func NewHandler(service *application.JobService, readiness ReadinessChecker, auth Authenticator, logger *slog.Logger) *Handler {
+	return &Handler{service: service, readiness: readiness, auth: auth, logger: logger}
 }
 
 // Routes returns the complete ImageFlow HTTP routing tree.
@@ -63,15 +70,15 @@ func (handler *Handler) Routes() http.Handler {
 	mux.HandleFunc("GET /openapi.yaml", handler.openAPIDocument)
 	mux.HandleFunc("GET /docs", handler.documentation)
 	mux.HandleFunc("GET /docs/", handler.documentation)
-	mux.HandleFunc("POST /v1/jobs", handler.createJob)
-	mux.HandleFunc("GET /v1/jobs/{id}", handler.getJob)
-	mux.HandleFunc("GET /v1/jobs/{id}/result", handler.getResult)
+	mux.Handle("POST /v1/jobs", handler.authenticate(http.HandlerFunc(handler.createJob)))
+	mux.Handle("GET /v1/jobs/{id}", handler.authenticate(http.HandlerFunc(handler.getJob)))
+	mux.Handle("GET /v1/jobs/{id}/result", handler.authenticate(http.HandlerFunc(handler.getResult)))
 	return requestLog(handler.logger, mux)
 }
 
 func (handler *Handler) getResult(w http.ResponseWriter, request *http.Request) {
 	id := strings.TrimSpace(request.PathValue("id"))
-	result, err := handler.service.Result(request.Context(), id)
+	result, err := handler.service.Result(request.Context(), projectID(request.Context()), id)
 	if errors.Is(err, application.ErrJobNotFound) {
 		writeError(w, http.StatusNotFound, "job_not_found", "job does not exist")
 		return
@@ -151,7 +158,7 @@ func (handler *Handler) createJob(w http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	job, err := handler.service.Create(request.Context(), application.CreateJobCommand(input))
+	job, err := handler.service.Create(request.Context(), application.CreateJobCommand{ProjectID: projectID(request.Context()), SourceURL: input.SourceURL, Operations: input.Operations})
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidSource) || errors.Is(err, domain.ErrMissingOperations) || errors.Is(err, domain.ErrInvalidOperation) {
 			writeError(w, http.StatusUnprocessableEntity, "validation_error", err.Error())
@@ -166,7 +173,7 @@ func (handler *Handler) createJob(w http.ResponseWriter, request *http.Request) 
 
 func (handler *Handler) getJob(w http.ResponseWriter, request *http.Request) {
 	id := strings.TrimSpace(request.PathValue("id"))
-	job, err := handler.service.Get(request.Context(), id)
+	job, err := handler.service.Get(request.Context(), projectID(request.Context()), id)
 	if errors.Is(err, application.ErrJobNotFound) {
 		writeError(w, http.StatusNotFound, "job_not_found", "job does not exist")
 		return
@@ -177,6 +184,33 @@ func (handler *Handler) getJob(w http.ResponseWriter, request *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, job)
+}
+
+type projectContextKey struct{}
+
+func (handler *Handler) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		scheme, token, found := strings.Cut(strings.TrimSpace(request.Header.Get("Authorization")), " ")
+		if !found || !strings.EqualFold(scheme, "Bearer") || strings.TrimSpace(token) == "" {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="imageflow"`)
+			writeError(w, http.StatusUnauthorized, "unauthorized", "a valid API key is required")
+			return
+		}
+		principal, err := handler.auth.Authenticate(request.Context(), token)
+		if err != nil {
+			handler.logger.Warn("API key authentication failed", "error", err)
+			w.Header().Set("WWW-Authenticate", `Bearer realm="imageflow"`)
+			writeError(w, http.StatusUnauthorized, "unauthorized", "a valid API key is required")
+			return
+		}
+		ctx := context.WithValue(request.Context(), projectContextKey{}, principal.ProjectID)
+		next.ServeHTTP(w, request.WithContext(ctx))
+	})
+}
+
+func projectID(ctx context.Context) string {
+	value, _ := ctx.Value(projectContextKey{}).(string)
+	return value
 }
 
 func requestLog(logger *slog.Logger, next http.Handler) http.Handler {
