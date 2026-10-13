@@ -46,10 +46,22 @@ type Job struct {
 	Attempts     int         `json:"attempts"`
 	ErrorCode    string      `json:"error_code,omitempty"`
 	ErrorMessage string      `json:"error_message,omitempty"`
+	Output       *Output     `json:"output,omitempty"`
 	CreatedAt    time.Time   `json:"created_at"`
 	StartedAt    *time.Time  `json:"started_at,omitempty"`
 	CompletedAt  *time.Time  `json:"completed_at,omitempty"`
 	UpdatedAt    time.Time   `json:"updated_at"`
+}
+
+// Output describes the binary artifact produced for a completed job.
+type Output struct {
+	Key         string `json:"-"`
+	ContentType string `json:"content_type"`
+	Format      string `json:"format"`
+	SizeBytes   int64  `json:"size_bytes"`
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+	URL         string `json:"url,omitempty"`
 }
 
 // NewJob validates input and creates a queued job.
@@ -162,9 +174,12 @@ func (operation Operation) Validate() error {
 		if operation.Width <= 0 && operation.Height <= 0 {
 			return ErrInvalidOperation
 		}
+		if operation.Width > 12_000 || operation.Height > 12_000 || (operation.Width > 0 && operation.Height > 0 && int64(operation.Width)*int64(operation.Height) > 40_000_000) {
+			return ErrInvalidOperation
+		}
 	case "convert":
 		switch operation.Format {
-		case "jpeg", "png", "webp", "avif":
+		case "jpeg", "png":
 		default:
 			return ErrInvalidOperation
 		}

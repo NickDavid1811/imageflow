@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/nickdavid1811/imageflow/internal/jobs/domain"
 )
 
 var ErrJobNotFound = errors.New("job not found")
+var ErrResultNotReady = errors.New("job result is not ready")
 
 // JobRepository is the persistence port required by JobService.
 type JobRepository interface {
@@ -28,17 +30,50 @@ type CreateJobCommand struct {
 // JobService coordinates job creation and retrieval.
 type JobService struct {
 	repository JobRepository
+	outputs    OutputReader
 	now        func() time.Time
 	newID      func() (string, error)
 }
 
+// OutputReader opens generated artifacts by storage key.
+type OutputReader interface {
+	Open(context.Context, string) (io.ReadCloser, error)
+}
+
+// JobResult contains a stream and its public metadata.
+type JobResult struct {
+	Body   io.ReadCloser
+	Output domain.Output
+}
+
 // NewJobService constructs a service with production clock and ID generation.
-func NewJobService(repository JobRepository) *JobService {
+func NewJobService(repository JobRepository, outputs ...OutputReader) *JobService {
+	var outputReader OutputReader
+	if len(outputs) > 0 {
+		outputReader = outputs[0]
+	}
 	return &JobService{
 		repository: repository,
+		outputs:    outputReader,
 		now:        time.Now,
 		newID:      randomID,
 	}
+}
+
+// Result opens the generated artifact of a completed job.
+func (service *JobService) Result(ctx context.Context, id string) (JobResult, error) {
+	job, err := service.repository.FindByID(ctx, id)
+	if err != nil {
+		return JobResult{}, err
+	}
+	if job.Status != domain.StatusCompleted || job.Output == nil || service.outputs == nil {
+		return JobResult{}, ErrResultNotReady
+	}
+	body, err := service.outputs.Open(ctx, job.Output.Key)
+	if err != nil {
+		return JobResult{}, fmt.Errorf("open job result: %w", err)
+	}
+	return JobResult{Body: body, Output: *job.Output}, nil
 }
 
 // Create validates and persists a new queued job.

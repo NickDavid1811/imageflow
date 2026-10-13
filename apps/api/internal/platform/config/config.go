@@ -16,6 +16,7 @@ const defaultNATSConsumer = "imageflow-workers"
 const defaultNATSDeadLetterStream = "IMAGEFLOW_JOBS_DLQ"
 const defaultNATSDeadLetterSubject = "imageflow.jobs.failed.v1"
 const defaultNATSMaxDeliveries = 10
+const defaultStoragePath = "../../infra/docker/data/objects"
 
 // Config contains runtime settings shared by ImageFlow processes.
 type Config struct {
@@ -28,6 +29,7 @@ type Config struct {
 	NATSDeadLetterStream  string
 	NATSDeadLetterSubject string
 	NATSMaxDeliveries     int
+	StoragePath           string
 }
 
 // FromEnv loads IMAGEFLOW_* variables and safe local-development defaults.
@@ -61,6 +63,7 @@ func FromEnv() (Config, error) {
 		NATSDeadLetterStream:  valueOrDefault("IMAGEFLOW_NATS_DLQ_STREAM", defaultNATSDeadLetterStream),
 		NATSDeadLetterSubject: valueOrDefault("IMAGEFLOW_NATS_DLQ_SUBJECT", defaultNATSDeadLetterSubject),
 		NATSMaxDeliveries:     maxDeliveries,
+		StoragePath:           valueOrDefault("IMAGEFLOW_STORAGE_PATH", defaultStoragePath),
 	}, nil
 }
 

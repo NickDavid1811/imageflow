@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -64,7 +65,32 @@ func (handler *Handler) Routes() http.Handler {
 	mux.HandleFunc("GET /docs/", handler.documentation)
 	mux.HandleFunc("POST /v1/jobs", handler.createJob)
 	mux.HandleFunc("GET /v1/jobs/{id}", handler.getJob)
+	mux.HandleFunc("GET /v1/jobs/{id}/result", handler.getResult)
 	return requestLog(handler.logger, mux)
+}
+
+func (handler *Handler) getResult(w http.ResponseWriter, request *http.Request) {
+	id := strings.TrimSpace(request.PathValue("id"))
+	result, err := handler.service.Result(request.Context(), id)
+	if errors.Is(err, application.ErrJobNotFound) {
+		writeError(w, http.StatusNotFound, "job_not_found", "job does not exist")
+		return
+	}
+	if errors.Is(err, application.ErrResultNotReady) {
+		writeError(w, http.StatusConflict, "result_not_ready", "job result is not ready")
+		return
+	}
+	if err != nil {
+		handler.logger.Error("get job result failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "internal_error", "the result could not be retrieved")
+		return
+	}
+	defer result.Body.Close()
+	w.Header().Set("Content-Type", result.Output.ContentType)
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", result.Output.SizeBytes))
+	w.Header().Set("Content-Disposition", "inline; filename=\""+id+"."+result.Output.Format+"\"")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, result.Body)
 }
 
 func (handler *Handler) openAPIDocument(w http.ResponseWriter, _ *http.Request) {

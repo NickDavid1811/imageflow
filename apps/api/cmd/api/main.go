@@ -12,6 +12,7 @@ import (
 	"time"
 
 	httpadapter "github.com/nickdavid1811/imageflow/internal/jobs/adapters/http"
+	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/localstorage"
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/postgres"
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
 	"github.com/nickdavid1811/imageflow/internal/platform/config"
@@ -42,7 +43,11 @@ func run(logger *slog.Logger) error {
 	defer pool.Close()
 
 	repository := postgres.NewJobRepository(pool)
-	service := application.NewJobService(repository)
+	outputs, err := localstorage.New(cfg.StoragePath)
+	if err != nil {
+		return err
+	}
+	service := application.NewJobService(repository, outputs)
 	handler := httpadapter.NewHandler(service, pool, logger)
 
 	server := &http.Server{

@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/httpfetch"
+	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/imaging"
+	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/localstorage"
 	natsadapter "github.com/nickdavid1811/imageflow/internal/jobs/adapters/nats"
 	jobpostgres "github.com/nickdavid1811/imageflow/internal/jobs/adapters/postgres"
 	jobapplication "github.com/nickdavid1811/imageflow/internal/jobs/application"
@@ -63,7 +66,11 @@ func run(logger *slog.Logger) error {
 	}
 
 	jobs := jobpostgres.NewJobRepository(pool)
-	processor := jobapplication.NewProcessor(jobs)
+	outputs, err := localstorage.New(cfg.StoragePath)
+	if err != nil {
+		return err
+	}
+	processor := jobapplication.NewProcessor(jobs, httpfetch.New(), imaging.NewProcessor(), outputs)
 	consumer := natsadapter.NewConsumer(subscription, processor, jetStream, cfg.NATSMaxDeliveries, logger)
 	outbox := outboxpostgres.NewRepository(pool)
 	publisher := outboxapplication.NewPublisher(outbox, jetStream, logger)

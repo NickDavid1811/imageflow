@@ -10,9 +10,11 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/memory"
 	"github.com/nickdavid1811/imageflow/internal/jobs/application"
+	"github.com/nickdavid1811/imageflow/internal/jobs/domain"
 )
 
 func TestCreateAndGetJob(t *testing.T) {
@@ -21,7 +23,7 @@ func TestCreateAndGetJob(t *testing.T) {
 	service := application.NewJobService(repository)
 	router := NewHandler(service, readyCheck{}, logger).Routes()
 
-	body := []byte(`{"source_url":"https://example.com/image.jpg","operations":[{"type":"resize","width":300},{"type":"convert","format":"webp","quality":80}]}`)
+	body := []byte(`{"source_url":"https://example.com/image.jpg","operations":[{"type":"resize","width":300},{"type":"convert","format":"jpeg","quality":80}]}`)
 	request := httptest.NewRequest("POST", "/v1/jobs", bytes.NewReader(body))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
@@ -41,6 +43,25 @@ func TestCreateAndGetJob(t *testing.T) {
 	router.ServeHTTP(recorder, request)
 	if recorder.Code != 200 {
 		t.Fatalf("status = %d, want %d", recorder.Code, 200)
+	}
+}
+
+func TestGetCompletedJobResult(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	repository := memory.NewJobRepository()
+	job := domain.Job{ID: "job_123", Status: domain.StatusCompleted, Output: &domain.Output{Key: "job_123.png", ContentType: "image/png", Format: "png", SizeBytes: 5}, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	if err := repository.Create(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	service := application.NewJobService(repository, resultReaderStub{})
+	router := NewHandler(service, readyCheck{}, logger).Routes()
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest("GET", "/v1/jobs/job_123/result", nil))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != "image" {
+		t.Fatalf("status = %d body = %q", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("Content-Type = %q", recorder.Header().Get("Content-Type"))
 	}
 }
 
@@ -117,3 +138,9 @@ func newTestRouter() http.Handler {
 type readyCheck struct{}
 
 func (readyCheck) Ping(context.Context) error { return nil }
+
+type resultReaderStub struct{}
+
+func (resultReaderStub) Open(context.Context, string) (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader("image")), nil
+}

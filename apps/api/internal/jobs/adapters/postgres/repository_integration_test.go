@@ -66,7 +66,8 @@ func TestJobAndOutboxPersistence(t *testing.T) {
 	if err := jobs.UpdateProgress(ctx, job.ID, 60, now.Add(3*time.Second)); err != nil {
 		t.Fatalf("update progress: %v", err)
 	}
-	if err := jobs.Complete(ctx, job.ID, now.Add(4*time.Second)); err != nil {
+	output := domain.Output{Key: job.ID + ".png", ContentType: "image/png", Format: "png", SizeBytes: 42, Width: 640, Height: 480}
+	if err := jobs.Complete(ctx, job.ID, output, now.Add(4*time.Second)); err != nil {
 		t.Fatalf("complete job: %v", err)
 	}
 
@@ -76,6 +77,9 @@ func TestJobAndOutboxPersistence(t *testing.T) {
 	}
 	if stored.Status != domain.StatusCompleted || stored.Progress != 100 || stored.Attempts != 1 {
 		t.Fatalf("stored job = %#v", stored)
+	}
+	if stored.Output == nil || stored.Output.Key != output.Key {
+		t.Fatalf("stored output = %#v", stored.Output)
 	}
 }
 

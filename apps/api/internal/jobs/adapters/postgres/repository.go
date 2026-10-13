@@ -26,7 +26,7 @@ func (repository *JobRepository) ClaimForProcessing(ctx context.Context, id stri
 		WHERE id = $1
 		  AND (
 		      status = 'queued'
-		      OR (status = 'processing' AND updated_at < ($2::timestamptz - interval '15 seconds'))
+		      OR (status = 'processing' AND updated_at < ($2::timestamptz - interval '2 minutes'))
 		  )`, id, now.UTC())
 	if err != nil {
 		return false, fmt.Errorf("claim job for processing: %w", err)
@@ -59,11 +59,14 @@ func (repository *JobRepository) UpdateProgress(ctx context.Context, id string, 
 	return nil
 }
 
-func (repository *JobRepository) Complete(ctx context.Context, id string, now time.Time) error {
+func (repository *JobRepository) Complete(ctx context.Context, id string, output domain.Output, now time.Time) error {
 	result, err := repository.pool.Exec(ctx, `
 		UPDATE jobs
-		SET status = 'completed', progress = 100, completed_at = $2, updated_at = $2
-		WHERE id = $1 AND status = 'processing'`, id, now.UTC())
+		SET status = 'completed', progress = 100, completed_at = $2, updated_at = $2,
+		    output_key = $3, output_content_type = $4, output_format = $5,
+		    output_size_bytes = $6, output_width = $7, output_height = $8
+		WHERE id = $1 AND status = 'processing'`, id, now.UTC(), output.Key, output.ContentType,
+		output.Format, output.SizeBytes, output.Width, output.Height)
 	if err != nil {
 		return fmt.Errorf("complete job: %w", err)
 	}
@@ -73,13 +76,13 @@ func (repository *JobRepository) Complete(ctx context.Context, id string, now ti
 	return nil
 }
 
-func (repository *JobRepository) Fail(ctx context.Context, id, code, message string, now time.Time) error {
+func (repository *JobRepository) Retry(ctx context.Context, id, code, message string, now time.Time) error {
 	_, err := repository.pool.Exec(ctx, `
 		UPDATE jobs
-		SET status = 'failed', error_code = $2, error_message = $3, updated_at = $4
+		SET status = 'queued', progress = 0, error_code = $2, error_message = $3, updated_at = $4
 		WHERE id = $1 AND status = 'processing'`, id, code, message, now.UTC())
 	if err != nil {
-		return fmt.Errorf("fail job: %w", err)
+		return fmt.Errorf("release job for retry: %w", err)
 	}
 	return nil
 }
@@ -145,14 +148,19 @@ func (repository *JobRepository) Create(ctx context.Context, job domain.Job) err
 func (repository *JobRepository) FindByID(ctx context.Context, id string) (domain.Job, error) {
 	var job domain.Job
 	var operations []byte
+	var outputKey, outputContentType, outputFormat *string
+	var outputSize *int64
+	var outputWidth, outputHeight *int
 	err := repository.pool.QueryRow(ctx, `
 		SELECT id, source_url, operations, status, progress, attempts,
 		       COALESCE(error_code, ''), COALESCE(error_message, ''),
-		       created_at, started_at, completed_at, updated_at
+		       created_at, started_at, completed_at, updated_at,
+		       output_key, output_content_type, output_format, output_size_bytes, output_width, output_height
 		FROM jobs
 		WHERE id = $1`, id).Scan(
 		&job.ID, &job.SourceURL, &operations, &job.Status, &job.Progress, &job.Attempts,
 		&job.ErrorCode, &job.ErrorMessage, &job.CreatedAt, &job.StartedAt, &job.CompletedAt, &job.UpdatedAt,
+		&outputKey, &outputContentType, &outputFormat, &outputSize, &outputWidth, &outputHeight,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Job{}, application.ErrJobNotFound
@@ -162,6 +170,10 @@ func (repository *JobRepository) FindByID(ctx context.Context, id string) (domai
 	}
 	if err := json.Unmarshal(operations, &job.Operations); err != nil {
 		return domain.Job{}, fmt.Errorf("decode operations: %w", err)
+	}
+	if outputKey != nil {
+		job.Output = &domain.Output{Key: *outputKey, ContentType: *outputContentType, Format: *outputFormat,
+			SizeBytes: *outputSize, Width: *outputWidth, Height: *outputHeight, URL: "/v1/jobs/" + job.ID + "/result"}
 	}
 	return job, nil
 }
