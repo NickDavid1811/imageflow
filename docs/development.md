@@ -74,12 +74,13 @@ actualizar el contrato y sus pruebas en el mismo cambio.
 
 ## Datos locales
 
-PostgreSQL escribe en `infra/docker/data/postgres`, excluido de Git. NATS usa
-el volumen `imageflow_nats_data`.
+PostgreSQL escribe en `infra/docker/data/postgres` y los resultados procesados
+en `infra/docker/data/objects`; ambos quedan excluidos de Git. NATS usa el
+volumen `imageflow_nats_data`. La ruta de resultados se puede cambiar mediante
+`IMAGEFLOW_STORAGE_PATH`.
 
 Para detener servicios conservando los datos:
 
 ```bash
 pnpm infra:down
 ```
-

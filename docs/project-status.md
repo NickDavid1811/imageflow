@@ -13,8 +13,7 @@ operaciones, consultar el estado del trabajo y obtener el archivo resultante.
 
 El proyecto está en una primera etapa funcional. La infraestructura asíncrona,
 la persistencia, la API y la consola ya trabajan de extremo a extremo. El
-procesamiento real de archivos todavía no está implementado: el worker simula
-el progreso y finaliza el trabajo.
+worker ya procesa imágenes JPEG/PNG y publica el resultado mediante la API.
 
 ## Estado funcional
 
@@ -39,9 +38,9 @@ NATS JetStream
     v
 Go Worker
     |
-    | queued -> processing -> completed
+    | descarga segura -> resize/conversión -> almacenamiento local
     v
-PostgreSQL -> polling de la consola
+PostgreSQL -> polling de la consola -> GET /v1/jobs/{id}/result
 ```
 
 La consola permite indicar:
@@ -72,6 +71,11 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Liveness, readiness y logs estructurados.
 - Cierre ordenado de API y worker.
 - Contrato OpenAPI 3.1 embebido y referencia interactiva con Scalar.
+- Descarga HTTP con protección SSRF, redirecciones limitadas, timeout y límite
+  de 20 MiB.
+- Resize y conversión real para JPEG/PNG con la biblioteca estándar de Go.
+- Almacenamiento local intercambiable mediante un puerto de aplicación.
+- Metadatos de salida y endpoint `GET /v1/jobs/{id}/result`.
 
 ### Frontend
 
@@ -82,6 +86,7 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 - Tema claro/oscuro con preferencia guardada en `localStorage`.
 - Estados visuales para `queued`, `processing`, `completed`, `failed` y
   `cancelled`.
+- Enlace al archivo generado cuando el trabajo termina.
 
 ### Infraestructura local
 
@@ -94,15 +99,13 @@ Sans cuando está instalada y utiliza fallbacks del sistema en caso contrario.
 
 ## Lo que todavía no hace
 
-El worker aún no descarga ni transforma imágenes. Los avances 25%, 60%, 90%
-y 100% son simulados. Todavía faltan:
+La primera implementación real está limitada deliberadamente a JPEG y PNG.
+Todavía faltan:
 
-- Descarga segura desde `source_url`.
-- Protección SSRF y límites de tamaño/tiempo.
-- Decodificación y validación real de imágenes.
-- Resize, conversión y compresión.
-- Almacenamiento del resultado.
-- URL o endpoint de descarga.
+- Resize con interpolación de mayor calidad.
+- Soporte WebP y AVIF mediante un motor apropiado.
+- Almacenamiento S3-compatible para despliegues distribuidos; el adaptador
+  actual usa `infra/docker/data/objects` y solo es apropiado para desarrollo.
 - Autenticación, API keys, cuotas y rate limiting.
 - Métricas, trazas y alertas.
 - Kubernetes y despliegue productivo.
