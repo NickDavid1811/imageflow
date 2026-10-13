@@ -81,6 +81,7 @@ export function CreateJobForm({
                 <input
                   inputMode="numeric"
                   min="1"
+                  max="12000"
                   type="number"
                   value={values.width}
                   onChange={(event) => onChange("width", event.target.value)}
@@ -95,6 +96,7 @@ export function CreateJobForm({
                 <input
                   inputMode="numeric"
                   min="1"
+                  max="12000"
                   type="number"
                   value={values.height}
                   onChange={(event) => onChange("height", event.target.value)}
@@ -104,6 +106,14 @@ export function CreateJobForm({
               </div>
             </label>
           </div>
+          <label className="subfield mt-3 block">
+            <span>Ajuste</span>
+            <select value={values.fit} onChange={(event) => onChange("fit", event.target.value as JobFormValues["fit"])}>
+              <option value="contain">Contener · conserva toda la imagen</option>
+              <option value="cover">Cubrir · llena y recorta al centro</option>
+              <option value="fill">Rellenar · fuerza las dimensiones</option>
+            </select>
+          </label>
         </fieldset>
 
         <fieldset>

@@ -1,9 +1,10 @@
-import type { CreateJobInput, ImageFormat } from "./job";
+import type { CreateJobInput, FitMode, ImageFormat } from "./job";
 
 export interface JobFormValues {
   sourceURL: string;
   width: string;
   height: string;
+  fit: FitMode;
   format: ImageFormat;
   quality: number;
 }
@@ -12,6 +13,7 @@ export const initialJobForm: JobFormValues = {
   sourceURL: "https://images.unsplash.com/photo-1542291026-7eec264c27ff",
   width: "1200",
   height: "",
+  fit: "contain",
   format: "jpeg",
   quality: 82,
 };
@@ -20,7 +22,7 @@ export function validateJobForm(values: JobFormValues): string | null {
   if (!values.sourceURL.trim()) return "Ingresa una URL de imagen válida.";
   try {
     const source = new URL(values.sourceURL);
-    if (!["http:", "https:", "s3:", "gs:", "ftp:"].includes(source.protocol))
+    if (!["http:", "https:"].includes(source.protocol))
       return "La imagen debe usar una URL HTTP o HTTPS.";
   } catch {
     return "Ingresa una URL de imagen válida.";
@@ -29,6 +31,8 @@ export function validateJobForm(values: JobFormValues): string | null {
     return "Define al menos el ancho o el alto de salida.";
   if (Number(values.width) < 0 || Number(values.height) < 0)
     return "Las dimensiones no pueden ser negativas.";
+  if (values.fit === "cover" && (!values.width || !values.height))
+    return "El modo cubrir necesita ancho y alto.";
   return null;
 }
 
@@ -40,6 +44,7 @@ export function toCreateJobInput(values: JobFormValues): CreateJobInput {
         type: "resize",
         width: values.width ? Number(values.width) : undefined,
         height: values.height ? Number(values.height) : undefined,
+        fit: values.fit,
       },
       { type: "convert", format: values.format, quality: values.quality },
     ],

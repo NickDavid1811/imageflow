@@ -170,6 +170,8 @@ export function JobDetails({ job, refreshing, onRefresh }: Props) {
 
 function describeOperation(operation: Job["operations"][number]): string {
   if (operation.type === "resize")
-    return `${operation.width || "auto"} × ${operation.height || "auto"} px`;
+    return `${operation.width || "auto"} × ${operation.height || "auto"} px · ${operation.fit || "contain"}`;
+  if (operation.type === "crop")
+    return `crop ${operation.width} × ${operation.height} @ ${operation.x},${operation.y}`;
   return `${operation.format} · ${operation.quality}%`;
 }

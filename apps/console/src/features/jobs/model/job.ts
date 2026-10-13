@@ -1,7 +1,9 @@
 export type ImageFormat = "jpeg" | "png";
+export type FitMode = "contain" | "cover" | "fill";
 
 export type ImageOperation =
-  | { type: "resize"; width?: number; height?: number }
+  | { type: "resize"; width?: number; height?: number; fit?: FitMode }
+  | { type: "crop"; x: number; y: number; width: number; height: number }
   | { type: "convert"; format: ImageFormat; quality: number };
 
 export type JobStatus =
