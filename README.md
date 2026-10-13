@@ -7,7 +7,7 @@ Servicio asíncrono de procesamiento de imágenes y su consola operativa.
 ```text
 apps/api       Backend, worker y migraciones en Go
 apps/console   Consola React, TypeScript y Tailwind
-infra/docker   PostgreSQL, NATS JetStream y MinIO para desarrollo
+infra/docker   PostgreSQL y NATS JetStream para desarrollo
 docs           Arquitectura y decisiones
 ```
 
@@ -25,7 +25,7 @@ La configuración predeterminada funciona sin archivos adicionales. Las variable
 pnpm dev
 ```
 
-Este comando levanta PostgreSQL, NATS y MinIO, aplica migraciones e inicia API, worker y consola en paralelo. También pueden iniciarse individualmente:
+Este comando levanta PostgreSQL y NATS, aplica migraciones e inicia API, worker y consola en paralelo. También pueden iniciarse individualmente:
 
 ```bash
 pnpm infra:up
