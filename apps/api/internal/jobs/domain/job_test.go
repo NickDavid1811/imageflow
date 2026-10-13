@@ -31,6 +31,8 @@ func TestNewJobRejectsInvalidInput(t *testing.T) {
 		{name: "missing operations", sourceURL: "https://example.com/image.jpg", want: ErrMissingOperations},
 		{name: "invalid resize", sourceURL: "https://example.com/image.jpg", operations: []Operation{{Type: "resize"}}, want: ErrInvalidOperation},
 		{name: "invalid format", sourceURL: "https://example.com/image.jpg", operations: []Operation{{Type: "convert", Format: "bmp"}}, want: ErrInvalidOperation},
+		{name: "cover without both dimensions", sourceURL: "https://example.com/image.jpg", operations: []Operation{{Type: "resize", Width: 100, Fit: "cover"}}, want: ErrInvalidOperation},
+		{name: "invalid crop", sourceURL: "https://example.com/image.jpg", operations: []Operation{{Type: "crop", X: -1, Width: 100, Height: 100}}, want: ErrInvalidOperation},
 	}
 
 	for _, test := range tests {

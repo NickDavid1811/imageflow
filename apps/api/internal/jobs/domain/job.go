@@ -30,8 +30,11 @@ const (
 // Operation describes one transformation in the requested processing pipeline.
 type Operation struct {
 	Type    string `json:"type"`
+	X       int    `json:"x,omitempty"`
+	Y       int    `json:"y,omitempty"`
 	Width   int    `json:"width,omitempty"`
 	Height  int    `json:"height,omitempty"`
+	Fit     string `json:"fit,omitempty"`
 	Format  string `json:"format,omitempty"`
 	Quality int    `json:"quality,omitempty"`
 }
@@ -175,6 +178,18 @@ func (operation Operation) Validate() error {
 			return ErrInvalidOperation
 		}
 		if operation.Width > 12_000 || operation.Height > 12_000 || (operation.Width > 0 && operation.Height > 0 && int64(operation.Width)*int64(operation.Height) > 40_000_000) {
+			return ErrInvalidOperation
+		}
+		switch operation.Fit {
+		case "", "contain", "cover", "fill":
+		default:
+			return ErrInvalidOperation
+		}
+		if operation.Fit == "cover" && (operation.Width <= 0 || operation.Height <= 0) {
+			return ErrInvalidOperation
+		}
+	case "crop":
+		if operation.X < 0 || operation.Y < 0 || operation.Width <= 0 || operation.Height <= 0 || operation.Width > 12_000 || operation.Height > 12_000 || int64(operation.Width)*int64(operation.Height) > 40_000_000 {
 			return ErrInvalidOperation
 		}
 	case "convert":
