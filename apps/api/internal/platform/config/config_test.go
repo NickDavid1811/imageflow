@@ -20,7 +20,7 @@ func TestFromEnvUsesDeadLetterDefaults(t *testing.T) {
 	if config.NATSDeadLetterSubject != "imageflow.jobs.failed.v1" {
 		t.Fatalf("NATSDeadLetterSubject = %q", config.NATSDeadLetterSubject)
 	}
-	if config.StorageDriver != "s3" || config.S3Endpoint != "http://localhost:9000" || config.S3Bucket != "imageflow" {
+	if config.StorageDriver != "local" || config.S3Endpoint != "http://localhost:9000" || config.S3Bucket != "imageflow" {
 		t.Fatalf("storage defaults = %#v", config)
 	}
 }
