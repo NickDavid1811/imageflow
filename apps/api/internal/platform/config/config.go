@@ -17,6 +17,12 @@ const defaultNATSDeadLetterStream = "IMAGEFLOW_JOBS_DLQ"
 const defaultNATSDeadLetterSubject = "imageflow.jobs.failed.v1"
 const defaultNATSMaxDeliveries = 10
 const defaultStoragePath = "../../infra/docker/data/objects"
+const defaultStorageDriver = "s3"
+const defaultS3Endpoint = "http://localhost:9000"
+const defaultS3Region = "us-east-1"
+const defaultS3Bucket = "imageflow"
+const defaultS3AccessKey = "imageflow"
+const defaultS3SecretKey = "imageflow_dev_secret"
 
 // Config contains runtime settings shared by ImageFlow processes.
 type Config struct {
@@ -30,6 +36,12 @@ type Config struct {
 	NATSDeadLetterSubject string
 	NATSMaxDeliveries     int
 	StoragePath           string
+	StorageDriver         string
+	S3Endpoint            string
+	S3Region              string
+	S3Bucket              string
+	S3AccessKey           string
+	S3SecretKey           string
 }
 
 // FromEnv loads IMAGEFLOW_* variables and safe local-development defaults.
@@ -53,6 +65,10 @@ func FromEnv() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	storageDriver := valueOrDefault("IMAGEFLOW_STORAGE_DRIVER", defaultStorageDriver)
+	if storageDriver != "local" && storageDriver != "s3" {
+		return Config{}, errors.New("IMAGEFLOW_STORAGE_DRIVER must be local or s3")
+	}
 	return Config{
 		HTTPAddress:           address,
 		DatabaseURL:           databaseURL,
@@ -64,6 +80,12 @@ func FromEnv() (Config, error) {
 		NATSDeadLetterSubject: valueOrDefault("IMAGEFLOW_NATS_DLQ_SUBJECT", defaultNATSDeadLetterSubject),
 		NATSMaxDeliveries:     maxDeliveries,
 		StoragePath:           valueOrDefault("IMAGEFLOW_STORAGE_PATH", defaultStoragePath),
+		StorageDriver:         storageDriver,
+		S3Endpoint:            valueOrDefault("IMAGEFLOW_S3_ENDPOINT", defaultS3Endpoint),
+		S3Region:              valueOrDefault("IMAGEFLOW_S3_REGION", defaultS3Region),
+		S3Bucket:              valueOrDefault("IMAGEFLOW_S3_BUCKET", defaultS3Bucket),
+		S3AccessKey:           valueOrDefault("IMAGEFLOW_S3_ACCESS_KEY", defaultS3AccessKey),
+		S3SecretKey:           valueOrDefault("IMAGEFLOW_S3_SECRET_KEY", defaultS3SecretKey),
 	}, nil
 }
 

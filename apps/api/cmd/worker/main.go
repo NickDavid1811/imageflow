@@ -12,7 +12,6 @@ import (
 
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/httpfetch"
 	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/imaging"
-	"github.com/nickdavid1811/imageflow/internal/jobs/adapters/localstorage"
 	natsadapter "github.com/nickdavid1811/imageflow/internal/jobs/adapters/nats"
 	jobpostgres "github.com/nickdavid1811/imageflow/internal/jobs/adapters/postgres"
 	jobapplication "github.com/nickdavid1811/imageflow/internal/jobs/application"
@@ -21,6 +20,7 @@ import (
 	"github.com/nickdavid1811/imageflow/internal/platform/config"
 	"github.com/nickdavid1811/imageflow/internal/platform/database"
 	"github.com/nickdavid1811/imageflow/internal/platform/messaging"
+	"github.com/nickdavid1811/imageflow/internal/platform/outputstore"
 )
 
 func main() {
@@ -66,7 +66,7 @@ func run(logger *slog.Logger) error {
 	}
 
 	jobs := jobpostgres.NewJobRepository(pool)
-	outputs, err := localstorage.New(cfg.StoragePath)
+	outputs, err := outputstore.Open(startupCtx, cfg)
 	if err != nil {
 		return err
 	}
